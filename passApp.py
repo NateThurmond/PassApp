@@ -1,28 +1,35 @@
-from flask import Flask, request, render_template, make_response
+from flask import Flask, request, render_template, make_response, send_file, abort
 from pykeepass import PyKeePass
 import os
+from io import BytesIO
 
 app = Flask(__name__)
 
 '''
 Phased rollout plan for implementation
 
+
 1. Limit brute force attempts on KeePass file
 - Limit attempts per IP/session
 - Add delays or lockout after 5 failed tries
 
 2. Generate a session UUID on successful unlock
+- Passwords are only sent hashed to server for identification
 - random uuid4 for authenticated sessions:
 - Acts as your session identifier
 - Should be tied to client via secure cookie
 
 3. Store session metadata in a DB, store the following:
 - session UUID
-- Salted + hashed KeePass password (e.g. bcrypt)
+- Salted + hashed user identification password (e.g. bcrypt)
 - Network file path
 - Expiration timestamp
 - Number of failed attempts
 - IP/user-agent
+
+4. Server returns kdbx file to client
+- Client uses PBKDF2 to decrypt kdbx file sent from server
+- Allows for zero-knowledge server architecture
 
 Extra Options (later):
 - Add 2FA or password re-entry for certain routes
@@ -60,6 +67,24 @@ def index():
     if request.method == 'POST':
         response.set_cookie('keepass_path', KEEPASS_FILE_PATH, max_age=60*60*24*365)
     return response
+
+@app.route('/download-vault', methods=['POST'])
+def download_vault():
+    KEEPASS_FILE_PATH = request.form.get('keepass_path')
+
+    if not KEEPASS_FILE_PATH or not os.path.exists(KEEPASS_FILE_PATH):
+        return abort(404)
+
+    # Read the raw .kdbx for delivery back to client
+    with open(KEEPASS_FILE_PATH, 'rb') as f:
+        kdbx_data = f.read()
+
+    return send_file(
+        BytesIO(kdbx_data),
+        mimetype='application/octet-stream',
+        as_attachment=False,
+        download_name='vault.kdbx'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

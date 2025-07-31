@@ -26,11 +26,16 @@ document.getElementById('loadFileLocal').addEventListener('click', async functio
   const db = await Kdbx.load(arrayBuffer, creds);
 
   console.log("Vault loaded!", db);
-  db.groups[0].entries.forEach(entry => {
-    console.log(
-        entry.fields.get('Title'),
-        entry.fields.get('UserName'),
-        entry.fields.get('Password')
-    );
-  });
+  for (const entry of db.groups[0].entries) {
+    const title = entry.fields.get('Title');
+    const username = entry.fields.get('UserName');
+    const passwordField = entry.fields.get('Password');
+
+    let password = '';
+    if (passwordField && typeof passwordField.getText === 'function') {
+      password = await passwordField.getText();
+    }
+
+    console.log(title, username, password);
+  }
 });

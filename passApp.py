@@ -1,5 +1,4 @@
 from flask import Flask, request, render_template, make_response, send_file, abort
-from pykeepass import PyKeePass
 from sql import PassAppDB
 import os
 from io import BytesIO
@@ -60,8 +59,6 @@ def index():
 
     if os.path.exists(KEEPASS_FILE_PATH) and KEEPASS_FILE_PASS:
         message = 'Pass DB File Found'
-        kp = PyKeePass(KEEPASS_FILE_PATH, password=KEEPASS_FILE_PASS)
-        entries = kp.entries
 
     renderVars = dict(
         message=message,

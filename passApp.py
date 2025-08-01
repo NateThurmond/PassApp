@@ -1,9 +1,15 @@
 from flask import Flask, request, render_template, make_response, send_file, abort
 from pykeepass import PyKeePass
+from sql import PassAppDB
 import os
 from io import BytesIO
 
 app = Flask(__name__)
+
+PassAppDB = PassAppDB()
+PassAppDB.populate_sample()
+value = PassAppDB.get_sample_value()
+print("Fetched:", value)
 
 '''
 Phased rollout plan for implementation

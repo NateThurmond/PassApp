@@ -5,10 +5,19 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-PassAppDB = PassAppDB()
-PassAppDB.populate_sample()
-value = PassAppDB.get_sample_value()
-print("Fetched:", value)
+db = PassAppDB()
+
+# Sample DB methods (for later use and implementation)
+# testUserName = 'testusd2gdffr4'
+# testUserEmail = testUserName + '@gmail.com'
+# print('CHECK USER UNIQUENESS:', db.check_user_uniqueness(testUserName, testUserEmail))
+# db.add_user(
+#     testUserName,
+#     testUserEmail,
+#     'df2f82mffgdfgdf2',
+#     'oldSalty1234'
+# )
+# print('IS LOGIN VALID:', db.validate_login(testUserName, 'df2f82mffgdfgdf2', '1.2.3.4'))
 
 '''
 Phased rollout plan for implementation
@@ -52,6 +61,9 @@ def index():
     if request.method == 'POST':
         KEEPASS_FILE_PATH = request.form.get('keepass_path')
         KEEPASS_FILE_PASS = request.form.get('keepass_pass')
+        user_name = request.form.get('user_name')
+        if user_name is not None:
+            print('Check User Uniqueness: ', user_name, db.check_user_uniqueness(user_name, user_name))
     else:
         existingCookie = request.cookies.get('keepass_path')
         if existingCookie:

@@ -14,6 +14,9 @@
     <div id="content">
         <p>{{ message }}</p>
         <form id="passAppLogin" action="/" method="POST">
+            <input id="user_name" type="text" name="user_name"
+                placeholder="Username" value="" required>
+            <br />
             <input id="keepass_path" type="text" name="keepass_path"
                 placeholder="Enter KeePass file path" value="{{ KEEPASS_FILE_PATH }}" required>
             <br />

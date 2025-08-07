@@ -1,9 +1,45 @@
 const { Credentials, ProtectedValue, Kdbx } = kdbxweb;
 
+function generateSalt(length = 16) {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array));
+}
+
+async function generatePasswordHash(plainTextPass, salt) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", encoder.encode(plainTextPass), { name: "PBKDF2" }, false, ["deriveBits"]
+  );
+  const hashBuffer = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(salt),
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    256
+  );
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateUserCreds() {
+  let userSalt = generateSalt();
+  let userPass = 'simplePass'; // Grabbed from form element
+  let userHashPass = await generatePasswordHash(userPass, userSalt);
+  let hashPassToPostB64 = btoa(userHashPass);
+  console.log('Generated salt: ', userSalt);
+  console.log('User Provided Plaintext Pass: ', userPass);
+  console.log('User Hashed Pass: ', userHashPass);
+  console.log('User Hashed Pass To Post: ', hashPassToPostB64);
+}
+generateUserCreds();
+
 document.getElementById('loadFileLocal').addEventListener('click', async function (e) {
   e.preventDefault();
 
-  const formData = new FormData(document.getElementById('passAppLogin'));
+  const formData = new FormData(document.getElementById('loadDb'));
 
   // Re-use the app auth form, to replace later. Only used after file download, not sent to server in this manner.
   const password = document.getElementById('keepass_pass').value;

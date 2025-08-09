@@ -10,19 +10,14 @@ import secrets
 
 Base = declarative_base()
 
-class SampleTable(Base):
-    __tablename__ = 'SampleTable'
-    id = Column(Integer, primary_key=True)
-    value = Column(String, nullable=False)
-
 class PassAppUsers(Base):
     __tablename__ = 'PassAppUsers'
     id = Column(Integer, primary_key=True)
     entropyId = Column(String, nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, nullable=False, unique=True)
     useremail = Column(String, nullable=False, unique=True)
-    pass_hash = Column(String, nullable=False)  # Should be bcrypt/argon2 hash sent from client-side
-    salt = Column(String, nullable=False)
+    salt = Column(String, nullable=False) # make sure to b64 encode
+    verifier = Column(String, nullable=False) # also b64 encoded
     login_attempts = Column(Integer, default=0)
     last_login_attempt = Column(DateTime)
     created_on = Column(DateTime, nullable=False, default=func.now())
@@ -50,15 +45,27 @@ class PassAppDB:
     def _create_table(self):
         Base.metadata.create_all(self.engine)
 
-    def is_login_valid(self, submitted_hash, stored_hash):
-        return submitted_hash == stored_hash
+    def check_user_uniqueness(self, username, useremail):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter(
+                (PassAppUsers.username == username) |
+                (PassAppUsers.useremail == useremail)
+            ).first()
+            return user is None
 
-    def add_user(self, username, useremail, pass_hash, salt):
+    def check_user_name_uniqueness(self, username):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter(
+                (PassAppUsers.username == username)
+            ).first()
+            return user is None
+
+    def add_user(self, username, useremail, salt, verifier):
         new_user = PassAppUsers(
             username=username,
             useremail=useremail,
-            pass_hash=pass_hash,
             salt=salt,
+            verifier=verifier,
             entropyId=secrets.token_urlsafe(32)
         )
         with Session(self.engine) as session:
@@ -70,61 +77,45 @@ class PassAppDB:
                 session.rollback()
                 return False
 
-    def check_user_uniqueness(self, username, useremail):
-        with Session(self.engine) as session:
-            user = session.query(PassAppUsers).filter(
-                (PassAppUsers.username == username) |
-                (PassAppUsers.useremail == useremail)
-            ).first()
-            return user is None
+    # def is_login_valid(self, submitted_hash, stored_hash):
+    #     return submitted_hash == stored_hash
 
-    def validate_login(self, username, posted_pass_hash, ip):
-        with Session(self.engine) as session:
-            user = session.query(PassAppUsers).filter_by(username=username).first()
-            if not user:
-                return None
+    # def validate_login(self, username, posted_pass_hash, ip):
+    #     with Session(self.engine) as session:
+    #         user = session.query(PassAppUsers).filter_by(username=username).first()
+    #         if not user:
+    #             return None
 
-            now = datetime.now()
-            user.last_login_attempt = now
+    #         now = datetime.now()
+    #         user.last_login_attempt = now
 
-            if user.login_attempts >= 5:
-                session.commit()
-                return None  # Block login after too many attempts
+    #         if user.login_attempts >= 5:
+    #             session.commit()
+    #             return None  # Block login after too many attempts
 
-            if not self.is_login_valid(posted_pass_hash, user.pass_hash):
-                user.login_attempts += 1
-                session.commit()
-                return None
+    #         if not self.is_login_valid(posted_pass_hash, user.pass_hash):
+    #             user.login_attempts += 1
+    #             session.commit()
+    #             return None
 
-            user.login_attempts = 0  # Reset on success
+    #         user.login_attempts = 0  # Reset on success
 
-            # Create session UUID
-            new_session = PassAppSessions(
-                user=user,
-                expires_on=now + timedelta(hours=1),
-                ip_address=ip
-            )
-            session.add(new_session)
-            session.commit()
-            return new_session.session_uuid
+    #         # Create session UUID
+    #         new_session = PassAppSessions(
+    #             user=user,
+    #             expires_on=now + timedelta(hours=1),
+    #             ip_address=ip
+    #         )
+    #         session.add(new_session)
+    #         session.commit()
+    #         return new_session.session_uuid
 
-    def get_user_by_session(self, session_uuid):
-        now = datetime.now()
-        with Session(self.engine) as session:
-            s = session.query(PassAppSessions).filter_by(session_uuid=session_uuid).first()
-            if not s or s.expires_on < now:
-                return None
-            s.last_accessed = now
-            session.commit()
-            return s.user
-
-    def populate_sample(self):
-        with Session(self.engine) as session:
-            session.query(SampleTable).delete()  # Clear existing
-            session.add(SampleTable(value='hello world'))
-            session.commit()
-
-    def get_sample_value(self):
-        with Session(self.engine) as session:
-            row = session.query(SampleTable).first()
-            return row.value if row else None
+    # def get_user_by_session(self, session_uuid):
+    #     now = datetime.now()
+    #     with Session(self.engine) as session:
+    #         s = session.query(PassAppSessions).filter_by(session_uuid=session_uuid).first()
+    #         if not s or s.expires_on < now:
+    #             return None
+    #         s.last_accessed = now
+    #         session.commit()
+    #         return s.user

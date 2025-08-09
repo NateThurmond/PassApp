@@ -1,40 +1,76 @@
 const { Credentials, ProtectedValue, Kdbx } = kdbxweb;
+const csrf_token = document.getElementById('token').value || '';
 
 function generateSalt(length = 16) {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array));
+  return array;
 }
 
-async function generatePasswordHash(plainTextPass, salt) {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw", encoder.encode(plainTextPass), { name: "PBKDF2" }, false, ["deriveBits"]
-  );
-  const hashBuffer = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: encoder.encode(salt),
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    256
-  );
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+document.getElementById('signUpForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
 
-async function generateUserCreds() {
-  let userSalt = generateSalt();
-  let userPass = 'simplePass'; // Grabbed from form element
-  let userHashPass = await generatePasswordHash(userPass, userSalt);
-  let hashPassToPostB64 = btoa(userHashPass);
-  console.log('Generated salt: ', userSalt);
-  console.log('User Provided Plaintext Pass: ', userPass);
-  console.log('User Hashed Pass: ', userHashPass);
-  console.log('User Hashed Pass To Post: ', hashPassToPostB64);
+    const form = event.target;
+    const formData = new FormData(form);
+
+    // Hold onto password until next step - do not post
+    const userName = (formData.get('up_user_name') || '').trim();
+    const userEmail = (formData.get('up_user_email') || '').trim();
+    const userPass = (formData.get('up_user_pass') || '').trim();
+    formData.delete['up_user_pass'];
+
+    await fetch('/signUpCheckUser', {
+        method: form.method,
+        body: formData,
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': csrf_token
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log(data.msg);
+      if (data.msg === "Username/email available") {
+        processSignUp(userName, userEmail, userPass, formData);
+      }
+    })
+    .catch(err => console.error(err));
+});
+
+async function processSignUp(userName, userEmail, userPass, formData) {
+  const userSalt = generateSalt();
+  const { saltHex, verifierHex } =
+    await computeSrpVerifier(userName, userPass, userSalt);
+
+  // Additional form data elements to send in signup payload
+  const signUpPayload = {
+    // userName,
+    // userEmail,
+    salt: saltHex,
+    verifier: verifierHex,
+    group: "RFC5054-2048",
+    hash: "SHA-256",
+    g: 2
+  };
+
+  for (const [key, value] of Object.entries(signUpPayload)) {
+    formData.append(key, value);
+  }
+
+  await fetch('/signUp', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      headers: {
+        'X-CSRFToken': csrf_token
+      },
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log('Signup result: ', data);
+  })
+  .catch(err => console.error(err));
 }
-generateUserCreds();
 
 document.getElementById('loadFileLocal').addEventListener('click', async function (e) {
   e.preventDefault();

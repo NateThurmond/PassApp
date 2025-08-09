@@ -1,58 +1,51 @@
-from flask import Flask, request, render_template, make_response, send_file, abort
+from flask import Flask, request, render_template, make_response, send_file, abort, jsonify
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sql import PassAppDB
 import os
 from io import BytesIO
+from dotenv import load_dotenv
+
+# Load the variables from the .env file
+load_dotenv()
+
+config_version = '0.0.1'
+
+# SRP constants
+N_HEX = (
+  "AC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC3192943DB56050"
+  "A37329CBB4A099ED8193E0757767A13DD52312AB4B03310DCD7F48A9DA04FD50"
+  "E8083969EDB767B0CF6096C3D6A9F0BFF5CB6F406B7EDEE386BFB5A899FA5AE9"
+  "F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A691"
+  "63FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670"
+  "C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF"
+)
+G = 2  # generator
+HASH = "SHA-256"
 
 app = Flask(__name__)
+app.secret_key = os.getenv('CSRF_SECRET_KEY')
+CSRFProtect(app)
+
+# 1 hop: ALB -> app. If Cloudflare+ALB, use x_for=2.
+# Make sure to set this right based on your deployment env
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per hour"],
+    storage_uri="memory://", # Swap out w/ Redis for AWS or prod site
+    # storage_uri="redis://localhost:6379/0", # Example
+)
+limiter.init_app(app)
 
 db = PassAppDB()
 
-# Sample DB methods (for later use and implementation)
-# testUserName = 'testusd2gdffr4'
-# testUserEmail = testUserName + '@gmail.com'
-# print('CHECK USER UNIQUENESS:', db.check_user_uniqueness(testUserName, testUserEmail))
-# db.add_user(
-#     testUserName,
-#     testUserEmail,
-#     'df2f82mffgdfgdf2',
-#     'oldSalty1234'
-# )
-# print('IS LOGIN VALID:', db.validate_login(testUserName, 'df2f82mffgdfgdf2', '1.2.3.4'))
-
-'''
-Phased rollout plan for implementation
-
-
-1. Limit brute force attempts on KeePass file
-- Limit attempts per IP/session
-- Add delays or lockout after 5 failed tries
-
-2. Generate a session UUID on successful unlock
-- Passwords are only sent hashed to server for identification
-- random uuid4 for authenticated sessions:
-- Acts as your session identifier
-- Should be tied to client via secure cookie
-
-3. Store session metadata in a DB, store the following:
-- session UUID
-- Salted + hashed user identification password (e.g. bcrypt)
-- Network file path
-- Expiration timestamp
-- Number of failed attempts
-- IP/user-agent
-
-4. Server returns kdbx file to client
-- Client uses PBKDF2 to decrypt kdbx file sent from server
-- Allows for zero-knowledge server architecture
-
-Extra Options (later):
-- Add 2FA or password re-entry for certain routes
-- Encrypt session DB contents at rest
-- Rate-limit unlock attempts per session/IP
-'''
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    token = generate_csrf()
     KEEPASS_FILE_PATH = ''
     KEEPASS_FILE_PASS = ''
     message = 'File not found'
@@ -75,7 +68,8 @@ def index():
     renderVars = dict(
         message=message,
         entries=entries,
-        KEEPASS_FILE_PATH=KEEPASS_FILE_PATH
+        KEEPASS_FILE_PATH=KEEPASS_FILE_PATH,
+        token=token
     )
 
     response = make_response(render_template('index.html', **renderVars))
@@ -101,5 +95,56 @@ def download_vault():
         download_name='vault.kdbx'
     )
 
+@app.route('/signUpCheckUser', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+def signUpCheckUser():
+
+    user_name = (request.form.get('up_user_name') or "").strip().lower()
+    user_email = (request.form.get('up_user_email') or "").strip().lower()
+
+    if not user_name or not user_email:
+        message = "Missing required fields"
+    else:
+        if not db.check_user_name_uniqueness(user_name):
+            message = "Username not available"
+        else:
+            message = "Username/email available"
+
+    return jsonify({"msg": message, "config_version": config_version}), 200
+
+@app.route('/signUp', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+def signUp():
+
+    user_name = (request.form.get('up_user_name') or "").strip().lower()
+    user_email = (request.form.get('up_user_email') or "").strip().lower()
+    salt = (request.form.get('salt') or "").strip().lower()
+    verifier = (request.form.get('verifier') or "").strip().lower()
+
+    # Not currently used but they are passed
+    # group = (request.form.get('group') or "").strip().lower()
+    # hash = (request.form.get('hash') or "").strip().lower()
+    # g = (request.form.get('g') or "").strip().lower()
+
+    # TO-DO: Lots more checks here
+    '''
+    - Need to verify user name and email are required length and valid format (email)
+    - Need to make sure salt and verifier are valid hex strings
+    - make sure verifier is hex and in range 1..N-1 for your SRP group
+    - potentially Limit request size (only if doesn't affect kdbx vault downloads)
+    '''
+
+    if not user_name or not user_email or not salt or not verifier:
+        message = "Missing required fields"
+    else:
+        if not db.check_user_uniqueness(user_name, user_email):
+            message = "Username not available"
+        elif not db.add_user(user_name, user_email, salt, verifier):
+            message = "Failed to add user"
+        else:
+            message = "User successfully added"
+
+    return jsonify({"msg": message, "config_version": config_version}), 200
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

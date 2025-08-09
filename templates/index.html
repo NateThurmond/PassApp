@@ -9,14 +9,27 @@
 </head>
 <body style="background: black; color: white">
     <div id="header">
-        <h1>Welcome to my Flask App!</h1>
+        <h1>Pass App</h1>
     </div>
     <div id="content">
-        <p>{{ message }}</p>
-        <form id="passAppLogin" action="/" method="POST">
-            <input id="user_name" type="text" name="user_name"
+        <input type="text" id="token" name="token" value="{{ token }}" style="display: none;" disabled/>
+
+        <h3>Sign-up</h3>
+        <form id="signUpForm" action="/submit" method="POST">
+            <input id="up_user_name" type="text" name="up_user_name"
                 placeholder="Username" value="" required>
             <br />
+            <input id="up_user_email" type="text" name="up_user_email"
+                placeholder="Useremail" value="" required>
+            <br />
+            <input id="up_user_pass" type="password" name="up_user_pass"
+                placeholder="Enter password" value="" required>
+            <br />
+            <button id="signUpButton" type="submit">Sign-up</button>
+        </form>
+
+        <h3>Load DB</h3>
+        <form id="loadDb" action="/" method="POST">
             <input id="keepass_path" type="text" name="keepass_path"
                 placeholder="Enter KeePass file path" value="{{ KEEPASS_FILE_PATH }}" required>
             <br />
@@ -27,11 +40,15 @@
         </form>
         <button id="loadFileLocal">Load KeePass File Local</button>
         <p>{{ entries }}</p>
+
+        <h2>{{ message }}</h2>
+
     </div>
     <div id="footer">
         <p>&copy; 2025 Pass App - NT &#174;</p>
     </div>
     <script src="static/JS/kdbxweb.js"></script>
+    <script src="static/JS/wc_cred.js"></script>
     <script type="module" src="static/JS/passApp.js"></script>
 </body>
 </html>

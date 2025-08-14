@@ -72,6 +72,72 @@ async function processSignUp(userName, userEmail, userPass, formData) {
   .catch(err => console.error(err));
 }
 
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const form = event.target;
+  const formData = new FormData(form);
+
+  const userName = (formData.get('login_user_name') || '').trim();
+  const userPass = (formData.get('login_user_pass') || '').trim();
+  formData.delete['login_user_pass']; // Never send to server
+
+  let clientEphemeralA = genClientEphemeral();
+  formData.append('clientEphemeralA', clientEphemeralA.Ahex);
+
+  await fetch('/login/srp/start', {
+      method: form.method,
+      body: formData,
+      credentials: 'include',
+      headers: {
+        'X-CSRFToken': csrf_token
+      },
+  })
+  .then(res => res.json())
+  .then(async data => {
+    // Nominally ... {"msg": message, "B": B_hex, "Salt": foundUserSalt, "config_version": config_version}
+    if (data.msg === "All Okay") {
+
+      const A_big = hexToBigInt(clientEphemeralA.Ahex);
+      const B_big = hexToBigInt(data.B);
+      const saltBytes = hexToBytes(data.Salt);
+
+      const k = BigInt("0x" + bytesToHex(await sha256Bytes(bigIntToBytes(N), bigIntToBytes(g))));
+      const u = BigInt("0x" + bytesToHex(await sha256Bytes(bigIntToBytes(A_big), bigIntToBytes(B_big))));
+      const x = BigInt("0x" + bytesToHex(await sha256(concatBytes(saltBytes, await sha256(utf8(`${userName}:${userPass}`))))));
+
+      const S = modPow(((B_big - (k * modPow(g, x, N)) % N) + N) % N, (clientEphemeralA.a + u * x), N);
+      const K_bytes = await sha256Bytes(bigIntToBytes(S));
+
+      const M1_hex = await computeM1(userName, saltBytes, A_big, B_big, K_bytes, N, g);
+
+      await verifyLogin(userName, M1_hex);
+    }
+  })
+  .catch(err => console.error(err));
+});
+
+async function verifyLogin(userName, M1_hex) {
+  let formData = new FormData();
+  formData.append('login_user_name', userName);
+  formData.append('client_proof_m1', M1_hex);
+  fetch('/login/srp/verify', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      headers: {
+        'X-CSRFToken': csrf_token
+      },
+  })
+  .then(res => res.json())
+  .then(async data => {
+    // The proof validation login result
+    console.log(data);
+    // Nominally sets session cookie (or error handling TO-DO)
+  })
+  .catch(err => console.error(err));
+}
+
 document.getElementById('loadFileLocal').addEventListener('click', async function (e) {
   e.preventDefault();
 

@@ -5,9 +5,8 @@ from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from email.utils import parseaddr
 from sql import PassAppDB
-import os
+import os, hashlib, re, hmac
 from io import BytesIO
-import re
 from dotenv import load_dotenv
 
 # Load the variables from the .env file
@@ -29,6 +28,7 @@ HASH = "SHA-256"
 
 HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
 N = int(N_HEX, 16)  # from SRP constant above
+LEN_N = (N.bit_length() + 7) // 8
 
 app = Flask(__name__)
 app.secret_key = os.getenv('CSRF_SECRET_KEY')
@@ -48,13 +48,101 @@ limiter.init_app(app)
 
 db = PassAppDB()
 
+# TO-DO: Migrate these methods to class or imported functions file
+# TO-DO: May end up differentiating between std helper fns and SRP specific ones
+
+# SRP START METHODS - START
+
+def H_bytes(*args):
+    """Hash and return integer."""
+    h = hashlib.sha256()
+    for a in args:
+        h.update(a)
+    return int.from_bytes(h.digest(), 'big')
+
+def int_to_bytes(i):
+    length = (i.bit_length() + 7) // 8
+    return i.to_bytes(length, 'big')
+
+# Generate server private ephemeral b (random)
+def generate_b(num_bytes=32):
+    return int.from_bytes(os.urandom(num_bytes), 'big')
+
+# Compute B = (k*v + g^b mod N) mod N - Hex returned to client as part of SRP
+def compute_B(v_hex, b):
+    v = int(v_hex, 16)
+    k = H_bytes(int_to_bytes(N), int_to_bytes(G))
+    return (k * v + pow(G, b, N)) % N
+
+# SRP START METHODS - END
+
+
+# SRP VERIFY METHODS - START
+
+def pad(i):
+    b = int_to_bytes(i)
+    return b if len(b) >= LEN_N else (b'\x00' * (LEN_N - len(b))) + b
+
+def H_bytes_concat(*parts):
+    h = hashlib.sha256()
+    for p in parts:
+        h.update(p)
+    return h.digest()
+
+def H_int(*parts):
+    return int.from_bytes(H_bytes_concat(*parts), 'big')
+
+def verify_m1(username: str, salt_hex: str, A_hex: str, b_hex: str, v_hex: str, m1_hex: str):
+    # inputs as hex (except username); returns (ok, M2_hex, K_hex)
+    A = int(A_hex, 16)
+    b = int(b_hex, 16)
+    v = int(v_hex, 16)
+    s = bytes.fromhex(salt_hex)
+
+    # k = H(N || g)
+    k = H_int(int_to_bytes(N), int_to_bytes(G))
+
+    # B = (k*v + g^b) mod N
+    B = (k * v + pow(G, b, N)) % N
+    if A % N == 0 or B % N == 0:
+        return (False, None, None)
+
+    # u = H( PAD(A) || PAD(B) )
+    u = H_int(int_to_bytes(A), int_to_bytes(B))
+
+    # S_server = (A * v^u)^b mod N
+    Avu = (A * pow(v, u, N)) % N
+    S = pow(Avu, b, N)
+
+    # K = H(S)
+    K_bytes = H_bytes_concat(int_to_bytes(S))
+    K_hex = K_bytes.hex()
+
+    # M1 = H( H(N) XOR H(g), H(I), s, A, B, K )
+    HN = H_bytes_concat(int_to_bytes(N))
+    Hg = H_bytes_concat(int_to_bytes(G))
+    Hxor = bytes(a ^ b for a, b in zip(HN, Hg))
+    HI = H_bytes_concat(username.encode('utf-8'))
+    M1_calc = H_bytes_concat(Hxor, HI, s, int_to_bytes(A), int_to_bytes(B), K_bytes)
+
+    ok = hmac.compare_digest(M1_calc.hex(), m1_hex.lower())
+    if not ok:
+        return (False, None, None)
+
+    # M2 = H( A, M1, K )  (common SRP-6a server proof)
+    M2 = H_bytes_concat(int_to_bytes(A), M1_calc, K_bytes).hex()
+    return (True, M2, K_hex)
+
+# SRP VERIFY METHODS - END
+
+
 # Helper fn for some of the later post methods
-def is_valid_email(addr: str) -> bool:
+def is_valid_email(addr):
     name, email_addr = parseaddr(addr)
     return '@' in email_addr and '.' in email_addr.split('@')[-1]
 
 # Same as above, validate some post data
-def is_valid_hex(s: str, min_len: int = None) -> bool:
+def is_valid_hex(s, min_len = None):
     if not HEX_RE.fullmatch(s):
         return False
     return min_len is None or len(s) >= min_len
@@ -169,6 +257,95 @@ def signUp():
             message = "Failed to add user"
         else:
             message = "User successfully added"
+
+    return jsonify({"msg": message, "config_version": config_version}), 200
+
+@app.route('/login/srp/start', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+def loginSrpStart():
+
+    if request.content_length and request.content_length > 500 * 1024:
+        abort(413)
+
+    user_name = (request.form.get('login_user_name') or "").strip().lower()
+    clientEphemeralA = (request.form.get('clientEphemeralA') or "").strip().lower()
+    foundUserSaltAndVerifier = db.get_user_salt(user_name)
+
+    foundUserSalt = ''
+    foundUserVerifier = ''
+    if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('salt'):
+        foundUserSalt = foundUserSaltAndVerifier['salt']
+    if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('verifier'):
+        foundUserVerifier = foundUserSaltAndVerifier['verifier']
+
+    serverPrivate_b = generate_b() # store in short-lived session
+    clientEphemeral_B = compute_B(foundUserVerifier, serverPrivate_b) # return to client for M1 calculation
+    B_hex = format(clientEphemeral_B, 'x') # As hex
+
+    if not user_name or not clientEphemeralA:
+        message = "Missing required fields"
+    elif not is_valid_hex(clientEphemeralA, 365):
+        message = "Client Ephemeral A must be a valid 365-character hex string"
+    elif not foundUserSaltAndVerifier:
+        message = "User not found"
+    elif not db.store_short_lived_srp(user_name, clientEphemeralA, format(serverPrivate_b, 'x'), foundUserVerifier):
+        message = "Failed to register short-lived SRP"
+    else:
+        message = "All Okay"
+
+    return jsonify({"msg": message, "B": B_hex, "Salt": foundUserSalt, "config_version": config_version}), 200
+
+@app.route('/login/srp/verify', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+def loginSrpVerify():
+
+    if request.content_length and request.content_length > 500 * 1024:
+        abort(413)
+
+    # TO-DO: Should we capturing username?
+    client_proof_m1 = (request.form.get('client_proof_m1') or "").strip().lower()
+    user_name = (request.form.get('login_user_name') or "").strip().lower()
+
+    foundUserSalt = ''
+    empheralA = ''
+    empheralB = ''
+    verifier = ''
+
+    # TO-DO: Shoud we be getting shortLivedSrp based on username?
+    # DB call to get srp short lived session data and salt based on username
+    foundUserSaltAndVerifier = db.get_user_salt(user_name)
+    shortLivedSrp = db.get_short_lived_srp(user_name)
+
+    if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('salt'):
+        foundUserSalt = foundUserSaltAndVerifier['salt']
+
+    if shortLivedSrp and shortLivedSrp.get('verifier'):
+        empheralA = shortLivedSrp['empheralA']
+        empheralB = shortLivedSrp['empheralB']
+        verifier = shortLivedSrp['verifier']
+
+    # Delete regardless
+    db.delete_short_lived_srp(user_name)
+
+    # The magic (certainly magic to me - I don't pretend to understand the math)
+    proof_match = verify_m1(
+        username=user_name,
+        salt_hex=foundUserSalt,
+        A_hex=empheralA, #clientEphemeralA
+        b_hex=empheralB, #serverEphemeralB
+        v_hex=verifier, #verifier
+        m1_hex=client_proof_m1
+    )
+
+    if not user_name or not client_proof_m1 :
+        message = "Missing required fields"
+    elif not is_valid_hex(client_proof_m1, 64):
+        message = "Client Proof not valid"
+    elif not proof_match[0]:
+        message = "Invalid login"
+    else:
+        # TO-DO: Set session login (cookie) (and store)
+        message = "Login successful!"
 
     return jsonify({"msg": message, "config_version": config_version}), 200
 

@@ -3,9 +3,11 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
+from email.utils import parseaddr
 from sql import PassAppDB
 import os
 from io import BytesIO
+import re
 from dotenv import load_dotenv
 
 # Load the variables from the .env file
@@ -25,6 +27,9 @@ N_HEX = (
 G = 2  # generator
 HASH = "SHA-256"
 
+HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
+N = int(N_HEX, 16)  # from SRP constant above
+
 app = Flask(__name__)
 app.secret_key = os.getenv('CSRF_SECRET_KEY')
 CSRFProtect(app)
@@ -42,6 +47,17 @@ limiter = Limiter(
 limiter.init_app(app)
 
 db = PassAppDB()
+
+# Helper fn for some of the later post methods
+def is_valid_email(addr: str) -> bool:
+    name, email_addr = parseaddr(addr)
+    return '@' in email_addr and '.' in email_addr.split('@')[-1]
+
+# Same as above, validate some post data
+def is_valid_hex(s: str, min_len: int = None) -> bool:
+    if not HEX_RE.fullmatch(s):
+        return False
+    return min_len is None or len(s) >= min_len
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -116,26 +132,36 @@ def signUpCheckUser():
 @limiter.limit("5/minute;30/hour")
 def signUp():
 
+    if request.content_length and request.content_length > 500 * 1024:
+        abort(413)
+
     user_name = (request.form.get('up_user_name') or "").strip().lower()
     user_email = (request.form.get('up_user_email') or "").strip().lower()
     salt = (request.form.get('salt') or "").strip().lower()
     verifier = (request.form.get('verifier') or "").strip().lower()
+
+    # SRP range check for verifier - for validation check later
+    v_int = int(verifier, 16)
 
     # Not currently used but they are passed
     # group = (request.form.get('group') or "").strip().lower()
     # hash = (request.form.get('hash') or "").strip().lower()
     # g = (request.form.get('g') or "").strip().lower()
 
-    # TO-DO: Lots more checks here
-    '''
-    - Need to verify user name and email are required length and valid format (email)
-    - Need to make sure salt and verifier are valid hex strings
-    - make sure verifier is hex and in range 1..N-1 for your SRP group
-    - potentially Limit request size (only if doesn't affect kdbx vault downloads)
-    '''
-
     if not user_name or not user_email or not salt or not verifier:
         message = "Missing required fields"
+    elif len(user_name) < 3 or len(user_name) > 32:
+        message = "Username must be between 3 and 32 characters"
+    elif len(user_email) < 5 or len(user_email) > 64:
+        message = "Email must be between 5 and 64 characters"
+    elif not is_valid_email(user_email):
+        message = "Invalid email format"
+    elif not is_valid_hex(salt, 32):
+        message = "Salt must be a valid 32-character hex string"
+    elif not is_valid_hex(verifier, 64):
+        message = "Verifier must be a valid 64-character hex string"
+    elif not (1 <= v_int < N):
+        message = "Invalid verifier value"
     else:
         if not db.check_user_uniqueness(user_name, user_email):
             message = "Username not available"

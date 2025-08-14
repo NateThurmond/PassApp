@@ -24,6 +24,10 @@ function hexToBytes(hex) {
   for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
   return out;
 }
+function hexToBigInt(hex) {
+  if (hex.startsWith("0x")) hex = hex.slice(2);
+  return BigInt("0x" + hex);
+}
 function bytesToHex(bytes) {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -66,4 +70,62 @@ async function computeSrpVerifier(username, password, saltBytes) {
     saltHex: bytesToHex(s),
     verifierHex: v.toString(16)
   };
+}
+
+// random 32-byte private value (for login)
+function randomPrivateA(bytes=32){
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return BigInt("0x" + bytesToHex(arr));
+}
+
+// pad A to N size (hex) for consistent encoding
+function padHexToN(hex) { return hex.padStart(N_HEX.length, "0"); }
+
+// Generate client ephemeral
+function genClientEphemeral(){
+  let a, A;
+  do {
+    a = randomPrivateA(32); // private ephemeral (client-side only)
+    A = modPow(g, a, N); // public ephemeral (passed to server)
+  } while (A === 0n); // extremely unlikely, but required by SRP
+
+  return {
+    a, // BigInt (for browser storage and later use)
+    Ahex: padHexToN(A.toString(16)) // send to server for proof
+  };
+}
+
+async function sha256Bytes(...parts) {
+  const msg = new Uint8Array(parts.reduce((len, p) => len + p.length, 0));
+  let offset = 0;
+  for (const p of parts) { msg.set(p, offset); offset += p.length; }
+  const buf = await crypto.subtle.digest("SHA-256", msg);
+  return new Uint8Array(buf);
+}
+
+function bigIntToBytes(bi) {
+  let hex = bi.toString(16);
+  if (hex.length % 2) hex = "0" + hex;
+  return Uint8Array.from(hex.match(/.{2}/g).map(byte => parseInt(byte, 16)));
+}
+
+async function computeM1(username, saltBytes, A_big, B_big, K_bytes, N, g) {
+  const HN = await sha256Bytes(bigIntToBytes(N));
+  const Hg = await sha256Bytes(bigIntToBytes(g));
+  const Hxor = new Uint8Array(HN.length);
+  for (let i = 0; i < HN.length; i++) Hxor[i] = HN[i] ^ Hg[i];
+
+  const HI = await sha256Bytes(new TextEncoder().encode(username));
+
+  const m1_bytes = await sha256Bytes(
+    Hxor,
+    HI,
+    saltBytes,
+    bigIntToBytes(A_big),
+    bigIntToBytes(B_big),
+    K_bytes
+  );
+
+  return Array.from(m1_bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }

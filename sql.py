@@ -16,14 +16,27 @@ class PassAppUsers(Base):
     entropyId = Column(String, nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, nullable=False, unique=True)
     useremail = Column(String, nullable=False, unique=True)
-    salt = Column(String, nullable=False) # make sure to b64 encode
-    verifier = Column(String, nullable=False) # also b64 encoded
+    salt = Column(String, nullable=False) # Stored as hex
+    verifier = Column(String, nullable=False) # Stored as hex
     login_attempts = Column(Integer, default=0)
     last_login_attempt = Column(DateTime)
     created_on = Column(DateTime, nullable=False, default=func.now())
     updated_on = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
 
     sessions = relationship("PassAppSessions", back_populates="user")
+
+# TO-DO: Need to define clean-up method later for this table
+# TO-DO: Also to-do, perhaps implement foreign relationship but this limits username entries to a single row as well as requiring storing user_id
+class shortLivedSrpStart(Base):
+    __tablename__ = 'shortLivedSrpStart'
+    id = Column(Integer, primary_key=True)
+    entropyId = Column(String, nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String, nullable=False, unique=True)
+    empheralA = Column(String, nullable=False)
+    empheralB = Column(String, nullable=False)
+    verifier = Column(String, nullable=False) # Stored as hex
+    created_on = Column(DateTime, nullable=False, default=func.now())
+    updated_on = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
 
 class PassAppSessions(Base):
     __tablename__ = 'PassAppSessions'
@@ -76,6 +89,62 @@ class PassAppDB:
             except IntegrityError:
                 session.rollback()
                 return False
+
+    def get_user_salt(self, username):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter(
+                (PassAppUsers.username == username)
+            ).first()
+            if user:
+                return {
+                    "salt": user.salt,
+                    "verifier": user.verifier
+                }
+            return None
+
+    # TO-DO: Research security of this approach
+    def store_short_lived_srp(self, username, empheralA, empheralB, verifier):
+        new_srp = shortLivedSrpStart(
+            username=username,
+            empheralA=empheralA,
+            empheralB=empheralB,
+            verifier=verifier,
+            entropyId=secrets.token_urlsafe(32)
+        )
+        with Session(self.engine) as session:
+            try:
+                session.add(new_srp)
+                session.commit()
+                return True
+            except IntegrityError:
+                session.rollback()
+                return False
+
+    # TO-DO: Research security of this approach and in particular the query parameter (username)
+    def get_short_lived_srp(self, username):
+        with Session(self.engine) as session:
+            srp = session.query(shortLivedSrpStart).filter(
+                (shortLivedSrpStart.username == username) |
+                (shortLivedSrpStart.created_on >= datetime.now() - timedelta(seconds=5))
+            ).first()
+            if srp:
+                return {
+                    "empheralA": srp.empheralA,
+                    "empheralB": srp.empheralB,
+                    "verifier": srp.verifier
+                }
+            return None
+
+    def delete_short_lived_srp(self, username):
+        with Session(self.engine) as session:
+            srp = session.query(shortLivedSrpStart).filter(
+                shortLivedSrpStart.username == username
+            ).first()
+            if srp:
+                session.delete(srp)
+                session.commit()
+                return True
+            return False
 
     # def is_login_valid(self, submitted_hash, stored_hash):
     #     return submitted_hash == stored_hash

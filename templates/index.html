@@ -28,6 +28,17 @@
             <button id="signUpButton" type="submit">Sign-up</button>
         </form>
 
+        <h3>Login</h3>
+        <form id="loginForm" action="/login" method="POST">
+            <input id="login_user_name" type="text" name="login_user_name"
+                placeholder="Username" value="" required>
+            <br />
+            <input id="login_user_pass" type="password" name="login_user_pass"
+                placeholder="Enter password" value="" required>
+            <br />
+            <button id="loginButton" type="submit">Login</button>
+        </form>
+
         <h3>Load DB</h3>
         <form id="loadDb" action="/" method="POST">
             <input id="keepass_path" type="text" name="keepass_path"

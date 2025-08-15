@@ -4,9 +4,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, Session, relationship
 from sqlalchemy.dialects.sqlite import BLOB
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import secrets
+import threading
+import time
 
 Base = declarative_base()
 
@@ -25,7 +27,6 @@ class PassAppUsers(Base):
 
     sessions = relationship("PassAppSessions", back_populates="user")
 
-# TO-DO: Need to define clean-up method later for this table
 # TO-DO: Also to-do, perhaps implement foreign relationship but this limits username entries to a single row as well as requiring storing user_id
 class shortLivedSrpStart(Base):
     __tablename__ = 'shortLivedSrpStart'
@@ -54,9 +55,26 @@ class PassAppDB:
     def __init__(self, db_path='sqlite:///passApp.db'):
         self.engine = create_engine(db_path, echo=False)
         self._create_table()
+        self._start_cleanup_thread()
 
     def _create_table(self):
         Base.metadata.create_all(self.engine)
+
+    '''
+        Background task to clear out invalid short-lived SRPs. There are perhaps more robust implementations
+        but this method is proven/reliable and runs as long as server runs and on startup.
+    '''
+    def _start_cleanup_thread(self):
+        def cleanup_loop():
+            while True:
+                time.sleep(5)  # Run every N seconds
+                try:
+                    self.delete_expired_short_lived_srps()
+                except Exception as e:
+                    print(f"Cleanup error: {e}")
+
+        thread = threading.Thread(target=cleanup_loop, daemon=True)
+        thread.start()
 
     def check_user_uniqueness(self, username, useremail):
         with Session(self.engine) as session:
@@ -145,6 +163,16 @@ class PassAppDB:
                 session.commit()
                 return True
             return False
+
+    def delete_expired_short_lived_srps(self):
+        with Session(self.engine) as session:
+            now = datetime.now(timezone.utc)
+            expired_srps = session.query(shortLivedSrpStart).filter(
+                shortLivedSrpStart.created_on < now - timedelta(seconds=5)
+            ).all()
+            for srp in expired_srps:
+                session.delete(srp)
+            session.commit()
 
     # def is_login_valid(self, submitted_hash, stored_hash):
     #     return submitted_hash == stored_hash

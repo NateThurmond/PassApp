@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    create_engine, Column, Integer, String, DateTime, ForeignKey, func
+    create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, func
 )
 from sqlalchemy.orm import declarative_base, Session, relationship
 from sqlalchemy.dialects.sqlite import BLOB
@@ -36,6 +36,7 @@ class shortLivedSrpStart(Base):
     empheralA = Column(String, nullable=False)
     empheralB = Column(String, nullable=False)
     verifier = Column(String, nullable=False) # Stored as hex
+    consumed = Column(Boolean, nullable=False, default=False)
     created_on = Column(DateTime, nullable=False, default=func.now())
     updated_on = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
 
@@ -120,32 +121,35 @@ class PassAppDB:
                 }
             return None
 
-    # TO-DO: Research security of this approach
     def store_short_lived_srp(self, username, empheralA, empheralB, verifier):
+        entropyId=secrets.token_urlsafe(32)
         new_srp = shortLivedSrpStart(
             username=username,
             empheralA=empheralA,
             empheralB=empheralB,
             verifier=verifier,
-            entropyId=secrets.token_urlsafe(32)
+            entropyId=entropyId
         )
         with Session(self.engine) as session:
             try:
                 session.add(new_srp)
                 session.commit()
-                return True
+                return entropyId
             except IntegrityError:
                 session.rollback()
                 return False
 
-    # TO-DO: Research security of this approach and in particular the query parameter (username)
-    def get_short_lived_srp(self, username):
+    def get_short_lived_srp(self, username, accessionId):
         with Session(self.engine) as session:
             srp = session.query(shortLivedSrpStart).filter(
-                (shortLivedSrpStart.username == username) |
+                (shortLivedSrpStart.username == username) &
+                (shortLivedSrpStart.consumed == False) &
+                (shortLivedSrpStart.entropyId == accessionId) &
                 (shortLivedSrpStart.created_on >= datetime.now() - timedelta(seconds=5))
             ).first()
             if srp:
+                srp.consumed = True  # Mark as consumed
+                session.commit()
                 return {
                     "empheralA": srp.empheralA,
                     "empheralB": srp.empheralB,
@@ -168,7 +172,8 @@ class PassAppDB:
         with Session(self.engine) as session:
             now = datetime.now(timezone.utc)
             expired_srps = session.query(shortLivedSrpStart).filter(
-                shortLivedSrpStart.created_on < now - timedelta(seconds=5)
+                (shortLivedSrpStart.created_on < now - timedelta(seconds=5)) |
+                (shortLivedSrpStart.consumed == True)
             ).all()
             for srp in expired_srps:
                 session.delete(srp)

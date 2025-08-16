@@ -111,16 +111,17 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
 
       const M1_hex = await computeM1(userName, saltBytes, A_big, B_big, K_bytes, N, g);
 
-      await verifyLogin(userName, M1_hex);
+      await verifyLogin(userName, M1_hex, data.accessionId || '');
     }
   })
   .catch(err => console.error(err));
 });
 
-async function verifyLogin(userName, M1_hex) {
+async function verifyLogin(userName, M1_hex, accessionId) {
   let formData = new FormData();
   formData.append('login_user_name', userName);
   formData.append('client_proof_m1', M1_hex);
+  formData.append('accessionId', accessionId);
   fetch('/login/srp/verify', {
       method: 'POST',
       body: formData,

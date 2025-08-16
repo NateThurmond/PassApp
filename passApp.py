@@ -272,15 +272,12 @@ def loginSrpStart():
     foundUserSaltAndVerifier = db.get_user_salt(user_name)
 
     foundUserSalt = ''
-    foundUserVerifier = ''
+    foundUserSalt = ''
+    B_hex = ''
     if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('salt'):
         foundUserSalt = foundUserSaltAndVerifier['salt']
     if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('verifier'):
         foundUserVerifier = foundUserSaltAndVerifier['verifier']
-
-    serverPrivate_b = generate_b() # store in short-lived session
-    clientEphemeral_B = compute_B(foundUserVerifier, serverPrivate_b) # return to client for M1 calculation
-    B_hex = format(clientEphemeral_B, 'x') # As hex
 
     if not user_name or not clientEphemeralA:
         message = "Missing required fields"
@@ -288,12 +285,19 @@ def loginSrpStart():
         message = "Client Ephemeral A must be a valid 365-character hex string"
     elif not foundUserSaltAndVerifier:
         message = "User not found"
-    elif not db.store_short_lived_srp(user_name, clientEphemeralA, format(serverPrivate_b, 'x'), foundUserVerifier):
-        message = "Failed to register short-lived SRP"
     else:
-        message = "All Okay"
+        serverPrivate_b = generate_b() # store in short-lived session
+        clientEphemeral_B = compute_B(foundUserVerifier, serverPrivate_b) # return to client for M1 calculation
+        B_hex = format(clientEphemeral_B, 'x') # As hex
+        accessionEntropyId = db.store_short_lived_srp(user_name, clientEphemeralA, format(serverPrivate_b, 'x'), foundUserVerifier)
 
-    return jsonify({"msg": message, "B": B_hex, "Salt": foundUserSalt, "config_version": config_version}), 200
+        if not accessionEntropyId:
+            message = "Failed to register short-lived SRP"
+        else:
+            message = "All Okay"
+
+    return jsonify({"msg": message, "B": B_hex, "Salt": foundUserSalt,
+        "config_version": config_version, "accessionId": accessionEntropyId}), 200
 
 @app.route('/login/srp/verify', methods=['POST'])
 @limiter.limit("5/minute;30/hour")
@@ -302,19 +306,18 @@ def loginSrpVerify():
     if request.content_length and request.content_length > 500 * 1024:
         abort(413)
 
-    # TO-DO: Should we capturing username?
     client_proof_m1 = (request.form.get('client_proof_m1') or "").strip().lower()
     user_name = (request.form.get('login_user_name') or "").strip().lower()
+    accessionId = (request.form.get('accessionId') or "").strip()
 
     foundUserSalt = ''
     empheralA = ''
     empheralB = ''
     verifier = ''
 
-    # TO-DO: Shoud we be getting shortLivedSrp based on username?
-    # DB call to get srp short lived session data and salt based on username
+    # DB call to get srp short lived session data and salt based on username and accessionId
     foundUserSaltAndVerifier = db.get_user_salt(user_name)
-    shortLivedSrp = db.get_short_lived_srp(user_name)
+    shortLivedSrp = db.get_short_lived_srp(user_name, accessionId)
 
     if foundUserSaltAndVerifier and foundUserSaltAndVerifier.get('salt'):
         foundUserSalt = foundUserSaltAndVerifier['salt']
@@ -324,7 +327,7 @@ def loginSrpVerify():
         empheralB = shortLivedSrp['empheralB']
         verifier = shortLivedSrp['verifier']
 
-    # Delete regardless
+    # Delete short lived srp session data regardless of results above
     db.delete_short_lived_srp(user_name)
 
     # The magic (certainly magic to me - I don't pretend to understand the math)
@@ -335,13 +338,13 @@ def loginSrpVerify():
         b_hex=empheralB, #serverEphemeralB
         v_hex=verifier, #verifier
         m1_hex=client_proof_m1
-    )
+    ) if foundUserSaltAndVerifier and shortLivedSrp else False
 
-    if not user_name or not client_proof_m1 :
+    if not user_name or not client_proof_m1 or not accessionId:
         message = "Missing required fields"
     elif not is_valid_hex(client_proof_m1, 64):
         message = "Client Proof not valid"
-    elif not proof_match[0]:
+    elif not proof_match or not proof_match[0]:
         message = "Invalid login"
     else:
         # TO-DO: Set session login (cookie) (and store)

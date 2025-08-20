@@ -150,7 +150,11 @@ document.getElementById('loadFileLocal').addEventListener('click', async functio
   // Fetch encrypted vault contents from Flask
   const res = await fetch('/download-vault', {
     method: 'POST',
-    body: formData
+    body: formData,
+    credentials: 'include',
+    headers: {
+      'X-CSRFToken': csrf_token
+    },
   });
 
   if (!res.ok) {

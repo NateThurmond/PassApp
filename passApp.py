@@ -6,6 +6,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from email.utils import parseaddr
 from sql import PassAppDB
 import os, hashlib, re, hmac
+import uuid
 from io import BytesIO
 from dotenv import load_dotenv
 
@@ -340,15 +341,35 @@ def loginSrpVerify():
         m1_hex=client_proof_m1
     ) if foundUserSaltAndVerifier and shortLivedSrp else False
 
-    if not user_name or not client_proof_m1 or not accessionId:
+    if db.get_login_attempts(user_name) > 5:
+        message = "Too many attempts, account locked"
+    elif not user_name or not client_proof_m1 or not accessionId:
         message = "Missing required fields"
     elif not is_valid_hex(client_proof_m1, 64):
         message = "Client Proof not valid"
     elif not proof_match or not proof_match[0]:
         message = "Invalid login"
     else:
-        # TO-DO: Set session login (cookie) (and store)
-        message = "Login successful!"
+        # store this session_token in PassAppSessions table
+        session_token = db.set_session(user_name, request.remote_addr)
+
+        response = make_response(jsonify({
+            "msg": "Login successful!",
+            "config_version": config_version
+        }))
+        # Secure flags: HttpOnly so JS can’t read it, SameSite to reduce CSRF
+        response.set_cookie(
+            "session_id",
+            session_token,
+            max_age=60*60*24,
+            secure=True,
+            httponly=True,
+            samesite="Strict"
+        )
+        return response
+
+    # Increment login attempts for this user on any route that's not a successful login
+    db.increase_login_attempt(user_name)
 
     return jsonify({"msg": message, "config_version": config_version}), 200
 

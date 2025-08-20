@@ -43,7 +43,7 @@ class shortLivedSrpStart(Base):
 class PassAppSessions(Base):
     __tablename__ = 'PassAppSessions'
     id = Column(Integer, primary_key=True)
-    session_uuid = Column(String, nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    session_uuid = Column(String, nullable=False, unique=True, default=lambda: secrets.token_urlsafe(32))
     user_id = Column(Integer, ForeignKey('PassAppUsers.id'), nullable=False)
     created_on = Column(DateTime, nullable=False, default=func.now())
     last_accessed = Column(DateTime, nullable=False, default=func.now())
@@ -179,38 +179,45 @@ class PassAppDB:
                 session.delete(srp)
             session.commit()
 
+    def increase_login_attempt(self, username):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter_by(username=username).first()
+            if user:
+                user.login_attempts += 1
+                user.last_login_attempt = datetime.now()
+                session.commit()
+                return True
+            return False
+
+    def get_login_attempts(self, username):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter_by(username=username).first()
+            if user:
+                return user.login_attempts
+            return 99
+
+    def set_session(self, username, ip):
+        with Session(self.engine) as session:
+            user = session.query(PassAppUsers).filter_by(username=username).first()
+            if not user:
+                return None
+
+            now = datetime.now()
+            user.last_login_attempt = now
+            user.login_attempts = 0
+
+            # Create session UUID
+            new_session = PassAppSessions(
+                user=user,
+                expires_on=now + timedelta(hours=24),
+                ip_address=ip
+            )
+            session.add(new_session)
+            session.commit()
+            return new_session.session_uuid
+
     # def is_login_valid(self, submitted_hash, stored_hash):
     #     return submitted_hash == stored_hash
-
-    # def validate_login(self, username, posted_pass_hash, ip):
-    #     with Session(self.engine) as session:
-    #         user = session.query(PassAppUsers).filter_by(username=username).first()
-    #         if not user:
-    #             return None
-
-    #         now = datetime.now()
-    #         user.last_login_attempt = now
-
-    #         if user.login_attempts >= 5:
-    #             session.commit()
-    #             return None  # Block login after too many attempts
-
-    #         if not self.is_login_valid(posted_pass_hash, user.pass_hash):
-    #             user.login_attempts += 1
-    #             session.commit()
-    #             return None
-
-    #         user.login_attempts = 0  # Reset on success
-
-    #         # Create session UUID
-    #         new_session = PassAppSessions(
-    #             user=user,
-    #             expires_on=now + timedelta(hours=1),
-    #             ip_address=ip
-    #         )
-    #         session.add(new_session)
-    #         session.commit()
-    #         return new_session.session_uuid
 
     # def get_user_by_session(self, session_uuid):
     #     now = datetime.now()

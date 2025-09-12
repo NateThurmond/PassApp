@@ -12,6 +12,8 @@ import time
 
 Base = declarative_base()
 
+# TO-DO: Make sure UTC is stored everywhere!
+
 class PassAppUsers(Base):
     __tablename__ = 'PassAppUsers'
     id = Column(Integer, primary_key=True)
@@ -71,6 +73,7 @@ class PassAppDB:
                 time.sleep(5)  # Run every N seconds
                 try:
                     self.delete_expired_short_lived_srps()
+                    self.delete_expired_sessions()
                 except Exception as e:
                     print(f"Cleanup error: {e}")
 
@@ -179,6 +182,16 @@ class PassAppDB:
                 session.delete(srp)
             session.commit()
 
+    def delete_expired_sessions(self):
+        with Session(self.engine) as session:
+            now = datetime.now(timezone.utc)
+            expired_sessions = session.query(PassAppSessions).filter(
+                (PassAppSessions.expires_on < now)
+            ).all()
+            for es in expired_sessions:
+                session.delete(es)
+            session.commit()
+
     def increase_login_attempt(self, username):
         with Session(self.engine) as session:
             user = session.query(PassAppUsers).filter_by(username=username).first()
@@ -202,29 +215,28 @@ class PassAppDB:
             if not user:
                 return None
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             user.last_login_attempt = now
             user.login_attempts = 0
 
             # Create session UUID
             new_session = PassAppSessions(
                 user=user,
-                expires_on=now + timedelta(hours=24),
+                expires_on=datetime.now(timezone.utc) + timedelta(hours=24),
                 ip_address=ip
             )
             session.add(new_session)
             session.commit()
             return new_session.session_uuid
 
-    # def is_login_valid(self, submitted_hash, stored_hash):
-    #     return submitted_hash == stored_hash
-
-    # def get_user_by_session(self, session_uuid):
-    #     now = datetime.now()
-    #     with Session(self.engine) as session:
-    #         s = session.query(PassAppSessions).filter_by(session_uuid=session_uuid).first()
-    #         if not s or s.expires_on < now:
-    #             return None
-    #         s.last_accessed = now
-    #         session.commit()
-    #         return s.user
+    def validate_session(self, token, ip=None, extend_minutes=30):
+        with Session(self.engine) as s:
+            sess = s.query(PassAppSessions).filter_by(session_uuid=token,ip_address=ip).first()
+            if not sess: return None
+            if int(sess.expires_on.timestamp()) <= int(datetime.now(timezone.utc).timestamp()):
+                s.delete(sess); s.commit()
+                return None
+            sess.last_accessed = datetime.now(timezone.utc)
+            sess.expires_on = datetime.now(timezone.utc) + timedelta(minutes=extend_minutes)
+            s.commit()
+            return s.query(PassAppUsers).get(sess.user_id)

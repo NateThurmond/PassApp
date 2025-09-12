@@ -3,6 +3,7 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
+from functools import wraps
 from email.utils import parseaddr
 from sql import PassAppDB
 import os, hashlib, re, hmac
@@ -53,6 +54,21 @@ db = PassAppDB()
 # TO-DO: May end up differentiating between std helper fns and SRP specific ones
 
 # SRP START METHODS - START
+
+# Wrapper method to require a valid session (login) for the routes we choose
+def require_session(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = request.cookies.get("session_id")
+        if not token:
+            return jsonify({"msg": "auth_required"}), 401
+        user = db.validate_session(token, request.remote_addr)
+        if not user:
+            return jsonify({"msg": "invalid_or_expired_session"}), 401
+        # stash on request context if you want
+        request.current_user = user
+        return f(*args, **kwargs)
+    return wrapper
 
 def H_bytes(*args):
     """Hash and return integer."""
@@ -183,6 +199,7 @@ def index():
     return response
 
 @app.route('/download-vault', methods=['POST'])
+@require_session
 def download_vault():
     KEEPASS_FILE_PATH = request.form.get('keepass_path')
 

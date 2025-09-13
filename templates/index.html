@@ -14,30 +14,36 @@
     <div id="content">
         <input type="text" id="token" name="token" value="{{ token }}" style="display: none;" disabled/>
 
-        <h3>Sign-up</h3>
-        <form id="signUpForm" action="/submit" method="POST">
-            <input id="up_user_name" type="text" name="up_user_name"
-                placeholder="Username" value="" required>
-            <br />
-            <input id="up_user_email" type="text" name="up_user_email"
-                placeholder="Useremail" value="" required>
-            <br />
-            <input id="up_user_pass" type="password" name="up_user_pass"
-                placeholder="Enter password" value="" required>
-            <br />
-            <button id="signUpButton" type="submit">Sign-up</button>
-        </form>
+        {% if not session_validated %}
+            <h3>Sign-up</h3>
+            <form id="signUpForm" action="/submit" method="POST">
+                <input id="up_user_name" type="text" name="up_user_name"
+                    placeholder="Username" value="" required>
+                <br />
+                <input id="up_user_email" type="text" name="up_user_email"
+                    placeholder="Useremail" value="" required>
+                <br />
+                <input id="up_user_pass" type="password" name="up_user_pass"
+                    placeholder="Enter password" value="" required>
+                <br />
+                <button id="signUpButton" type="submit">Sign-up</button>
+            </form>
 
-        <h3>Login</h3>
-        <form id="loginForm" action="/login" method="POST">
-            <input id="login_user_name" type="text" name="login_user_name"
-                placeholder="Username" value="" required>
-            <br />
-            <input id="login_user_pass" type="password" name="login_user_pass"
-                placeholder="Enter password" value="" required>
-            <br />
-            <button id="loginButton" type="submit">Login</button>
-        </form>
+            <h3>Login</h3>
+            <form id="loginForm" action="/login" method="POST">
+                <input id="login_user_name" type="text" name="login_user_name"
+                    placeholder="Username" value="" required>
+                <br />
+                <input id="login_user_pass" type="password" name="login_user_pass"
+                    placeholder="Enter password" value="" required>
+                <br />
+                <button id="loginButton" type="submit">Login</button>
+            </form>
+
+        {% else %}
+            <h2>Welcome!</h2>
+            <button id="logout">Logout</button>
+        {% endif %}
 
         <h3>Load DB</h3>
         <form id="loadDb" action="/" method="POST">

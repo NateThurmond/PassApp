@@ -240,3 +240,11 @@ class PassAppDB:
             sess.expires_on = datetime.now(timezone.utc) + timedelta(minutes=extend_minutes)
             s.commit()
             return s.query(PassAppUsers).get(sess.user_id)
+
+    def destroy_session(self, token):
+        with Session(self.engine) as s:
+            sess = s.query(PassAppSessions).filter_by(session_uuid=token).first()
+            if not sess: return None
+            s.delete(sess); s.commit()
+            return None
+

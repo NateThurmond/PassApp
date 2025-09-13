@@ -55,18 +55,27 @@ db = PassAppDB()
 
 # SRP START METHODS - START
 
-# Wrapper method to require a valid session (login) for the routes we choose
+# Can either validate login (bool) or return http response with some req. context setting
+def is_session_validated(request, returnType='bool'):
+    token = request.cookies.get("session_id")
+    if not token:
+        return False if returnType == 'bool' else jsonify({"msg": "auth_required"})
+    user = db.validate_session(token, request.remote_addr)
+    if not user:
+        return False if returnType == 'bool' else jsonify({"msg": "invalid_or_expired_session"})
+    if returnType == 'req':
+        # stash on request context for reference later
+        request.current_user = user
+        request.session_validated = True
+    return True
+
+# Wrapper method to require a valid session (login) for the routes requiring auth
 def require_session(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        token = request.cookies.get("session_id")
-        if not token:
-            return jsonify({"msg": "auth_required"}), 401
-        user = db.validate_session(token, request.remote_addr)
-        if not user:
-            return jsonify({"msg": "invalid_or_expired_session"}), 401
-        # stash on request context if you want
-        request.current_user = user
+        is_session_validated_result = is_session_validated(request, 'req')
+        if is_session_validated_result != True:
+            return is_session_validated_result, 401
         return f(*args, **kwargs)
     return wrapper
 
@@ -190,7 +199,8 @@ def index():
         message=message,
         entries=entries,
         KEEPASS_FILE_PATH=KEEPASS_FILE_PATH,
-        token=token
+        token=token,
+        session_validated=is_session_validated(request)
     )
 
     response = make_response(render_template('index.html', **renderVars))
@@ -216,6 +226,18 @@ def download_vault():
         as_attachment=False,
         download_name='vault.kdbx'
     )
+
+@app.route('/logout', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+@require_session
+def logout():
+    resp = jsonify({"msg": "Logged out", "config_version": config_version})
+
+    if request.session_validated == True:
+        db.destroy_session(request.cookies.get("session_id"))
+        resp.delete_cookie("session_id", path="/")
+
+    return resp, 200
 
 @app.route('/signUpCheckUser', methods=['POST'])
 @limiter.limit("5/minute;30/hour")

@@ -140,6 +140,25 @@ async function verifyLogin(userName, M1_hex, accessionId) {
   .catch(err => console.error(err));
 }
 
+(document.getElementById('logout') || fbNode).addEventListener('click', async (e) => {
+  e.preventDefault();
+
+  await fetch('/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-CSRFToken': csrf_token
+      },
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.msg === "Logged out") {
+      window.location.reload();
+    }
+  })
+  .catch(err => console.error(err));
+});
+
 (document.getElementById('loadFileLocal') || fbNode).addEventListener('click', async (e) => {
   e.preventDefault();
 

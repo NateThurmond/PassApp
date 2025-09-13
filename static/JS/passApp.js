@@ -1,5 +1,6 @@
 const { Credentials, ProtectedValue, Kdbx } = kdbxweb;
 const csrf_token = document.getElementById('token').value || '';
+const fbNode = document.createElement("div") // More terse for conditional event listener attachment
 
 function generateSalt(length = 16) {
   const array = new Uint8Array(length);
@@ -7,7 +8,7 @@ function generateSalt(length = 16) {
   return array;
 }
 
-document.getElementById('signUpForm').addEventListener('submit', async (event) => {
+(document.getElementById('signUpForm') || fbNode).addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const form = event.target;
@@ -72,7 +73,7 @@ async function processSignUp(userName, userEmail, userPass, formData) {
   .catch(err => console.error(err));
 }
 
-document.getElementById('loginForm').addEventListener('submit', async (event) => {
+(document.getElementById('loginForm') || fbNode).addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const form = event.target;
@@ -139,7 +140,7 @@ async function verifyLogin(userName, M1_hex, accessionId) {
   .catch(err => console.error(err));
 }
 
-document.getElementById('loadFileLocal').addEventListener('click', async function (e) {
+(document.getElementById('loadFileLocal') || fbNode).addEventListener('click', async (e) => {
   e.preventDefault();
 
   const formData = new FormData(document.getElementById('loadDb'));

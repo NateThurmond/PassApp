@@ -6,11 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pass App</title>
     <link rel="icon" href="static/images/unlock.svg">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body style="background: black; color: white">
-    <div id="header">
-        <h1>Pass App</h1>
-    </div>
+    <header class="navbar">
+        <div class="navbar-left">
+            <span class="brand">Pass App</span>
+        </div>
+        <div class="navbar-right">
+            <a href="#">Login</a>
+            <a href="#">Sign Up</a>
+        </div>
+    </header>
     <div id="content">
         <input type="text" id="token" name="token" value="{{ token }}" style="display: none;" disabled/>
 

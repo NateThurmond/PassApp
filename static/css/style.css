@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #222;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+.navbar .brand {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.navbar-right a {
+  color: white;
+  text-decoration: none;
+  margin-left: 20px;
+  transition: opacity 0.2s;
+}
+
+.navbar-right a:hover {
+  opacity: 0.7;
+}
+
+#content {
+  padding-top: 60px;
+}
+

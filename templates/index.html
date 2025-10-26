@@ -14,59 +14,58 @@
             <span class="brand">Pass App</span>
         </div>
         <div class="navbar-right">
-            <a href="#">Login</a>
-            <a href="#">Sign Up</a>
+            {% if not session_validated %}
+                <i class="passAppIcn passAppIcnInfo">&#9432;</i>
+            {% else %}
+                <i class="passAppIcn">⚙</i>
+                <button id="logout" class="passAppBtn">Logout</button>
+            {% endif %}
         </div>
     </header>
     <div id="content">
         <input type="text" id="token" name="token" value="{{ token }}" style="display: none;" disabled/>
 
         {% if not session_validated %}
-            <h3>Sign-up</h3>
-            <form id="signUpForm" action="/submit" method="POST">
-                <input id="up_user_name" type="text" name="up_user_name"
+            <br /><br />
+            <form id="loginForm" action="/login" method="POST">
+                <input id="land_user_name" type="text" name="land_user_name"
                     placeholder="Username" value="" required>
                 <br />
-                <input id="up_user_email" type="text" name="up_user_email"
+                <input id="land_user_pass" type="password" name="land_user_pass"
+                    placeholder="Enter password" value="" required>
+                <br />
+                <br />
+                <button id="loginButton" class="passAppBtn" type="submit">Login</button>
+            </form>
+
+            <h3>OR</h3>
+
+            <form id="signUpForm" action="/submit" method="POST">
+                <input id="verify_user_pass" type="password" name="verify_user_pass"
+                    placeholder="Verify password" value="" required>
+                <br />
+                <input id="land_user_email" type="text" name="land_user_email"
                     placeholder="Useremail" value="" required>
                 <br />
-                <input id="up_user_pass" type="password" name="up_user_pass"
-                    placeholder="Enter password" value="" required>
                 <br />
-                <button id="signUpButton" type="submit">Sign-up</button>
+                <button id="signUpButton" class="passAppBtn" type="submit">Sign-up</button>
             </form>
-
-            <h3>Login</h3>
-            <form id="loginForm" action="/login" method="POST">
-                <input id="login_user_name" type="text" name="login_user_name"
-                    placeholder="Username" value="" required>
-                <br />
-                <input id="login_user_pass" type="password" name="login_user_pass"
-                    placeholder="Enter password" value="" required>
-                <br />
-                <button id="loginButton" type="submit">Login</button>
-            </form>
-
         {% else %}
-            <h2>Welcome!</h2>
-            <button id="logout">Logout</button>
+            <h3>Load DB</h3>
+            <form id="loadDb" action="/" method="POST">
+                <input id="keepass_path" type="text" name="keepass_path"
+                    placeholder="Enter KeePass file path" value="{{ KEEPASS_FILE_PATH }}" required>
+                <br />
+                <input id="keepass_pass" type="password" name="keepass_pass"
+                    placeholder="Enter KeePass file pass" value="" required>
+                <br />
+                <button type="submit" class="passAppBtn">Set KeePass File Location</button>
+            </form>
+            <button id="loadFileLocal" class="passAppBtn">Load KeePass File Local</button>
+            <p>{{ entries }}</p>
+
+            <h2>{{ message }}</h2>
         {% endif %}
-
-        <h3>Load DB</h3>
-        <form id="loadDb" action="/" method="POST">
-            <input id="keepass_path" type="text" name="keepass_path"
-                placeholder="Enter KeePass file path" value="{{ KEEPASS_FILE_PATH }}" required>
-            <br />
-            <input id="keepass_pass" type="password" name="keepass_pass"
-                placeholder="Enter KeePass file pass" value="" required>
-            <br />
-            <button type="submit">Set KeePass File Location</button>
-        </form>
-        <button id="loadFileLocal">Load KeePass File Local</button>
-        <p>{{ entries }}</p>
-
-        <h2>{{ message }}</h2>
-
     </div>
     <div id="footer">
         <p>&copy; 2025 Pass App - NT &#174;</p>

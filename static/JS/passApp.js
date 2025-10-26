@@ -11,14 +11,29 @@ function generateSalt(length = 16) {
 (document.getElementById('signUpForm') || fbNode).addEventListener('submit', async (event) => {
     event.preventDefault();
 
+    // Re-use some of the inputs from the login form for cleaner UI
+    if (!document.getElementById('loginForm').reportValidity()) {
+      return;
+    }
+
+    const passMatch = (a = document.getElementById('land_user_pass')?.value,
+      b = document.getElementById('verify_user_pass')?.value) => a && b && a === b;
+
+    if (!passMatch()) {
+      document.getElementById('verify_user_pass').setCustomValidity("Passwords do not match");
+      document.getElementById('signUpForm').reportValidity();
+      return;
+    }
+
     const form = event.target;
     const formData = new FormData(form);
 
     // Hold onto password until next step - do not post
-    const userName = (formData.get('up_user_name') || '').trim();
-    const userEmail = (formData.get('up_user_email') || '').trim();
-    const userPass = (formData.get('up_user_pass') || '').trim();
-    formData.delete['up_user_pass'];
+    const userName = document.getElementById('land_user_name')?.value.trim().toLowerCase();
+    formData.append('land_user_name', userName);
+    const userPass = document.getElementById('land_user_pass')?.value.trim();
+    const userEmail = (formData.get('land_user_email') || '').trim();
+    formData.delete['land_user_pass'];
 
     await fetch('/signUpCheckUser', {
         method: form.method,
@@ -69,6 +84,9 @@ async function processSignUp(userName, userEmail, userPass, formData) {
   .then(res => res.json())
   .then(data => {
     console.log('Signup result: ', data);
+    if (data?.msg === 'User successfully added') {
+      document.getElementById('loginForm').requestSubmit();
+    }
   })
   .catch(err => console.error(err));
 }
@@ -79,9 +97,9 @@ async function processSignUp(userName, userEmail, userPass, formData) {
   const form = event.target;
   const formData = new FormData(form);
 
-  const userName = (formData.get('login_user_name') || '').trim();
-  const userPass = (formData.get('login_user_pass') || '').trim();
-  formData.delete['login_user_pass']; // Never send to server
+  const userName = (formData.get('land_user_name') || '').trim().toLowerCase();
+  const userPass = (formData.get('land_user_pass') || '').trim();
+  formData.delete['land_user_pass']; // Never send to server
 
   let clientEphemeralA = genClientEphemeral();
   formData.append('clientEphemeralA', clientEphemeralA.Ahex);
@@ -120,7 +138,7 @@ async function processSignUp(userName, userEmail, userPass, formData) {
 
 async function verifyLogin(userName, M1_hex, accessionId) {
   let formData = new FormData();
-  formData.append('login_user_name', userName);
+  formData.append('land_user_name', userName);
   formData.append('client_proof_m1', M1_hex);
   formData.append('accessionId', accessionId);
   fetch('/login/srp/verify', {
@@ -136,6 +154,9 @@ async function verifyLogin(userName, M1_hex, accessionId) {
     // The proof validation login result
     console.log(data);
     // Nominally sets session cookie (or error handling TO-DO)
+    if (data?.msg === 'Login successful!') {
+      window.location.reload();
+    }
   })
   .catch(err => console.error(err));
 }

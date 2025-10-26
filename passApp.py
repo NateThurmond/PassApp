@@ -184,7 +184,7 @@ def index():
     if request.method == 'POST':
         KEEPASS_FILE_PATH = request.form.get('keepass_path')
         KEEPASS_FILE_PASS = request.form.get('keepass_pass')
-        user_name = request.form.get('user_name')
+        user_name = request.form.get('land_user_name')
         if user_name is not None:
             print('Check User Uniqueness: ', user_name, db.check_user_uniqueness(user_name, user_name))
     else:
@@ -243,8 +243,8 @@ def logout():
 @limiter.limit("5/minute;30/hour")
 def signUpCheckUser():
 
-    user_name = (request.form.get('up_user_name') or "").strip().lower()
-    user_email = (request.form.get('up_user_email') or "").strip().lower()
+    user_name = (request.form.get('land_user_name') or "").strip().lower()
+    user_email = (request.form.get('land_user_email') or "").strip().lower()
 
     if not user_name or not user_email:
         message = "Missing required fields"
@@ -263,8 +263,8 @@ def signUp():
     if request.content_length and request.content_length > 500 * 1024:
         abort(413)
 
-    user_name = (request.form.get('up_user_name') or "").strip().lower()
-    user_email = (request.form.get('up_user_email') or "").strip().lower()
+    user_name = (request.form.get('land_user_name') or "").strip().lower()
+    user_email = (request.form.get('land_user_email') or "").strip().lower()
     salt = (request.form.get('salt') or "").strip().lower()
     verifier = (request.form.get('verifier') or "").strip().lower()
 
@@ -307,7 +307,7 @@ def loginSrpStart():
     if request.content_length and request.content_length > 500 * 1024:
         abort(413)
 
-    user_name = (request.form.get('login_user_name') or "").strip().lower()
+    user_name = (request.form.get('land_user_name') or "").strip().lower()
     clientEphemeralA = (request.form.get('clientEphemeralA') or "").strip().lower()
     foundUserSaltAndVerifier = db.get_user_salt(user_name)
 
@@ -347,7 +347,7 @@ def loginSrpVerify():
         abort(413)
 
     client_proof_m1 = (request.form.get('client_proof_m1') or "").strip().lower()
-    user_name = (request.form.get('login_user_name') or "").strip().lower()
+    user_name = (request.form.get('land_user_name') or "").strip().lower()
     accessionId = (request.form.get('accessionId') or "").strip()
 
     foundUserSalt = ''

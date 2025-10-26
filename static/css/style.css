@@ -23,15 +23,38 @@ body {
   font-size: 1.2rem;
 }
 
-.navbar-right a {
-  color: white;
-  text-decoration: none;
-  margin-left: 20px;
-  transition: opacity 0.2s;
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
-.navbar-right a:hover {
-  opacity: 0.7;
+.passAppBtn {
+  background-color: #2f4663;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.15s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.passAppBtn:hover {
+  background-color: #26364a;
+  transform: translateY(-1px);
+}
+
+.passAppIcn {
+  font-size: 40px;
+  font-style: normal;
+  cursor: pointer;
+}
+
+.passAppIcnInfo {
+  font-size: 30px;
 }
 
 #content {

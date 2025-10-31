@@ -54,6 +54,19 @@ class PassAppSessions(Base):
 
     user = relationship("PassAppUsers", back_populates="sessions")
 
+class KeePassVaults(Base):
+    __tablename__ = 'KeePassVaults'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('PassAppUsers.id'), nullable=False)
+    vault_name = Column(String, nullable=False, unique=False)
+    vault_data = Column(BLOB, nullable=False)
+    sha256 = Column(String, nullable=False)  # Hex SHA256 of vault_data (for versioning)
+    version = Column(Integer, nullable=False, default=1)
+    created_on = Column(DateTime, nullable=False, default=func.now())
+    updated_on = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    user = relationship("PassAppUsers")
+
 class PassAppDB:
     def __init__(self, db_path='sqlite:///passApp.db'):
         self.engine = create_engine(db_path, echo=False)

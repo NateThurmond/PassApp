@@ -1,6 +1,16 @@
-body {
+html, body {
+  height: 100%;
   margin: 0;
+  display: flex;
+  flex-direction: column;
   font-family: Arial, sans-serif;
+}
+
+#content {
+  padding-top: 60px;
+  flex: 1;
+  padding-top: 60px;
+  text-align: center;
 }
 
 .navbar {
@@ -8,7 +18,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  background-color: #222;
+  background-color: #2f4663;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -57,7 +67,38 @@ body {
   font-size: 30px;
 }
 
-#content {
-  padding-top: 60px;
+.passAppInput {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: 1px solid #ccd2da;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: #2f4663;
+  background-color: #f9fafb;
+  box-sizing: border-box;
 }
 
+.passAppInput:focus {
+  border-color: #2f4663;
+  box-shadow: 0 0 4px rgba(47, 70, 99, 0.3);
+  background-color: #fff;
+}
+
+.passAppInput::placeholder {
+  color: #9ca3af;
+}
+
+.passAppInput:disabled {
+  background-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+#footer {
+  background-color: #2f4663;
+  color: white;
+  padding: 10px 10px;
+  font-size: 0.9rem;
+}

@@ -28,10 +28,10 @@
         {% if not session_validated %}
             <br /><br />
             <form id="loginForm" action="/login" method="POST">
-                <input id="land_user_name" type="text" name="land_user_name"
+                <input class="passAppInput" id="land_user_name" type="text" name="land_user_name"
                     placeholder="Username" value="" required>
                 <br />
-                <input id="land_user_pass" type="password" name="land_user_pass"
+                <input class="passAppInput" id="land_user_pass" type="password" name="land_user_pass"
                     placeholder="Enter password" value="" required>
                 <br />
                 <br />
@@ -41,10 +41,10 @@
             <h3>OR</h3>
 
             <form id="signUpForm" action="/submit" method="POST">
-                <input id="verify_user_pass" type="password" name="verify_user_pass"
+                <input class="passAppInput" id="verify_user_pass" type="password" name="verify_user_pass"
                     placeholder="Verify password" value="" required>
                 <br />
-                <input id="land_user_email" type="text" name="land_user_email"
+                <input class="passAppInput" id="land_user_email" type="text" name="land_user_email"
                     placeholder="Useremail" value="" required>
                 <br />
                 <br />
@@ -53,10 +53,10 @@
         {% else %}
             <h3>Load DB</h3>
             <form id="loadDb" action="/" method="POST">
-                <input id="keepass_path" type="text" name="keepass_path"
+                <input class="passAppInput" id="keepass_path" type="text" name="keepass_path"
                     placeholder="Enter KeePass file path" value="{{ KEEPASS_FILE_PATH }}" required>
                 <br />
-                <input id="keepass_pass" type="password" name="keepass_pass"
+                <input class="passAppInput" id="keepass_pass" type="password" name="keepass_pass"
                     placeholder="Enter KeePass file pass" value="" required>
                 <br />
                 <button type="submit" class="passAppBtn">Set KeePass File Location</button>

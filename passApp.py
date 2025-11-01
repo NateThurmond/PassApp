@@ -227,6 +227,20 @@ def download_vault():
         download_name='vault.kdbx'
     )
 
+@app.route('/load-vault', methods=['POST'])
+@require_session
+def download_db():
+    kdbx_data = b''
+    if request.session_validated == True:
+        kdbx_data = db.getUserVault(request.current_user.id, 'passClientsDb')
+
+    return send_file(
+        BytesIO(kdbx_data),
+        mimetype='application/octet-stream',
+        as_attachment=False,
+        download_name='vault.kdbx'
+    )
+
 @app.route('/logout', methods=['POST'])
 @limiter.limit("5/minute;30/hour")
 @require_session

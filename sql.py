@@ -261,6 +261,14 @@ class PassAppDB:
             s.delete(sess); s.commit()
             return None
 
+    def listUserVaults(self, userId):
+        with Session(self.engine) as session:
+            keePassVaults = session.query(KeePassVaults).filter(
+                KeePassVaults.user_id == userId,
+            ).all()
+            vaultNames = [vault.vault_name for vault in keePassVaults]
+            return vaultNames
+
     def getUserVault(self, userId, vaultName):
         with Session(self.engine) as session:
             keePassVault = session.query(KeePassVaults).filter(

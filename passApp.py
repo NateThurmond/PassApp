@@ -208,6 +208,7 @@ def index():
         response.set_cookie('keepass_path', KEEPASS_FILE_PATH, max_age=60*60*24*365)
     return response
 
+#TO-DO: Remove eventually, this was the old way of handling this
 @app.route('/download-vault', methods=['POST'])
 @require_session
 def download_vault():
@@ -227,9 +228,21 @@ def download_vault():
         download_name='vault.kdbx'
     )
 
+@app.route('/list-vaults', methods=['GET'])
+def list_vaults():
+    vaults = []
+    if is_session_validated(request, 'req') == True:
+        vaults = db.listUserVaults(request.current_user.id)
+
+    return jsonify({
+        "vaults": vaults,
+        "config_version": config_version
+    }), 200
+
 @app.route('/load-vault', methods=['POST'])
 @require_session
 def download_db():
+    # TO-DO: Parse request.vault_name and pass below to get the right vault
     kdbx_data = b''
     if request.session_validated == True:
         kdbx_data = db.getUserVault(request.current_user.id, 'passClientsDb')

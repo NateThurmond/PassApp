@@ -30,11 +30,29 @@ async function listVaults() {
 listVaults();
 
 async function buildVaultListLinks(vaults) {
+  const template = document.querySelector('.vaultItemTemplate');
   vaults.forEach(vault => {
-    const vaultLinksUl = document.getElementById('vaultLinks');
-    const div = document.createElement('div');
-    div.textContent = `Vault: ${vault}`;
-    vaultLinksUl.appendChild(div);
+    // Clone the entire node
+    let vaultNode = template.cloneNode(true);
+
+    // Remove hidden styles / classes
+    vaultNode.style.display = '';
+    vaultNode.classList.remove('vaultItemTemplate');
+
+    // Update the vault name inside the clone
+    let nameEl = vaultNode.querySelector('.vaultName');
+    if (nameEl) {
+      nameEl.innerHTML = `<strong>Vault:</strong> ${vault}`;
+    }
+
+    // Append to the list
+    document.getElementById('vaultLinks').appendChild(vaultNode);
+
+    // And add event listener to unlock the vault
+    let unlockBtnElem = vaultNode.querySelector('.unlockVault');
+    unlockBtnElem.addEventListener('click', vaultUnlockListener);
+
+    // And actually download the vault
     downloadVault(vault);
   });
 }
@@ -232,3 +250,32 @@ async function verifyLogin(userName, M1_hex, accessionId) {
   })
   .catch(err => console.error(err));
 });
+
+async function vaultUnlockListener(e) {
+
+  // The button that was clicked
+  const btn = e.target;
+  const parent = btn.closest('.vaultPasswordFormDiv');
+  // Find the password input inside it
+  const passToUnlock = parent.querySelector('.vaultPasswordInput').value || '';
+
+  const vaultName = 'passClientsDb';
+  let vaultToLoad = userVaults[vaultName];
+
+  // Use kdbxweb to decrypt
+  const creds = new Credentials(ProtectedValue.fromString(passToUnlock));
+  const db = await Kdbx.load(vaultToLoad, creds);
+
+  for (const entry of db.groups[0].entries) {
+    const title = entry.fields.get('Title');
+    const username = entry.fields.get('UserName');
+    const passwordField = entry.fields.get('Password');
+
+    let password = '';
+    if (passwordField && typeof passwordField.getText === 'function') {
+      password = await passwordField.getText();
+    }
+
+    console.log(title, username, password);
+  }
+};

@@ -9,6 +9,7 @@ function generateSalt(length = 16) {
 }
 
 // For authenticated users, keep track of their loaded vaults
+let userVaultsNames = {};
 let userVaults = {};
 
 async function listVaults() {
@@ -21,18 +22,43 @@ async function listVaults() {
     })
     .then(res => res.json())
     .then(data => {
-      userVaults = data.vaults || {};
-      console.log('User vaults: ', userVaults);
-      buildVaultListLinks(userVaults);
+      userVaultsNames = data.vaults || {};
+      buildVaultListLinks(userVaultsNames);
     })
     .catch(err => console.error(err));
 }
 listVaults();
 
-function buildVaultListLinks(vaults) {
+async function buildVaultListLinks(vaults) {
   vaults.forEach(vault => {
-    console.log(vault);
+    const vaultLinksUl = document.getElementById('vaultLinks');
+    const div = document.createElement('div');
+    div.textContent = `Vault: ${vault}`;
+    vaultLinksUl.appendChild(div);
+    downloadVault(vault);
   });
+}
+
+async function downloadVault(vaultName) {
+  const formData = new FormData();
+  formData.append('vault_name', vaultName);
+  // Fetch encrypted vault contents from Flask and save to global
+  const res = await fetch('/download-vault', {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    headers: {
+      'X-CSRFToken': csrf_token
+    },
+  });
+
+  if (!res.ok) {
+    alert("Failed to load vault");
+    return;
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  userVaults[String(vaultName)] = arrayBuffer;
 }
 
 (document.getElementById('signUpForm') || fbNode).addEventListener('submit', async (event) => {

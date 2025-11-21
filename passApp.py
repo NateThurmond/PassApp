@@ -176,7 +176,7 @@ def is_valid_hex(s, min_len = None):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     token = generate_csrf()
-    message = 'Welcom'
+    message = 'Welcome'
 
     renderVars = dict(
         message=message,
@@ -198,13 +198,13 @@ def list_vaults():
         "config_version": config_version
     }), 200
 
-@app.route('/load-vault', methods=['POST'])
+@app.route('/download-vault', methods=['POST'])
 @require_session
 def download_db():
-    # TO-DO: Parse request.vault_name and pass below to get the right vault
+    vault_name = (request.form.get('vault_name') or "").strip()
     kdbx_data = b''
     if request.session_validated == True:
-        kdbx_data = db.getUserVault(request.current_user.id, 'passClientsDb')
+        kdbx_data = db.getUserVault(request.current_user.id, vault_name)
 
     return send_file(
         BytesIO(kdbx_data),

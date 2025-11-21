@@ -51,6 +51,12 @@
                 <button id="signUpButton" class="passAppBtn" type="submit">Sign-up</button>
             </form>
         {% else %}
+            <div id="vaultList">
+                <h2>Your Vaults:</h2>
+                <div id="vaultLinks">
+                    <!-- Vault links will be populated here -->
+                </div>
+            </div>
             <h2>{{ message }}</h2>
         {% endif %}
     </div>

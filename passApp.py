@@ -176,57 +176,16 @@ def is_valid_hex(s, min_len = None):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     token = generate_csrf()
-    KEEPASS_FILE_PATH = ''
-    KEEPASS_FILE_PASS = ''
-    message = 'File not found'
-    entries = []
-
-    if request.method == 'POST':
-        KEEPASS_FILE_PATH = request.form.get('keepass_path')
-        KEEPASS_FILE_PASS = request.form.get('keepass_pass')
-        user_name = request.form.get('land_user_name')
-        if user_name is not None:
-            print('Check User Uniqueness: ', user_name, db.check_user_uniqueness(user_name, user_name))
-    else:
-        existingCookie = request.cookies.get('keepass_path')
-        if existingCookie:
-            KEEPASS_FILE_PATH = existingCookie
-
-    if os.path.exists(KEEPASS_FILE_PATH) and KEEPASS_FILE_PASS:
-        message = 'Pass DB File Found'
+    message = 'Welcom'
 
     renderVars = dict(
         message=message,
-        entries=entries,
-        KEEPASS_FILE_PATH=KEEPASS_FILE_PATH,
         token=token,
         session_validated=is_session_validated(request)
     )
 
     response = make_response(render_template('index.html', **renderVars))
-    if request.method == 'POST':
-        response.set_cookie('keepass_path', KEEPASS_FILE_PATH, max_age=60*60*24*365)
     return response
-
-#TO-DO: Remove eventually, this was the old way of handling this
-@app.route('/download-vault', methods=['POST'])
-@require_session
-def download_vault():
-    KEEPASS_FILE_PATH = request.form.get('keepass_path')
-
-    if not KEEPASS_FILE_PATH or not os.path.exists(KEEPASS_FILE_PATH):
-        return abort(404)
-
-    # Read the raw .kdbx for delivery back to client
-    with open(KEEPASS_FILE_PATH, 'rb') as f:
-        kdbx_data = f.read()
-
-    return send_file(
-        BytesIO(kdbx_data),
-        mimetype='application/octet-stream',
-        as_attachment=False,
-        download_name='vault.kdbx'
-    )
 
 @app.route('/list-vaults', methods=['GET'])
 def list_vaults():

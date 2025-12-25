@@ -276,3 +276,23 @@ class PassAppDB:
                 KeePassVaults.vault_name == vaultName,
             ).first()
             return keePassVault.vault_data
+
+    def addUserVault(self, userId, vaultName, vaultData):
+        import hashlib
+        vault_hash = hashlib.sha256(vaultData).hexdigest()
+
+        new_vault = KeePassVaults(
+            user_id=userId,
+            vault_name=vaultName,
+            vault_data=vaultData,
+            sha256=vault_hash,
+            version=1
+        )
+        with Session(self.engine) as session:
+            try:
+                session.add(new_vault)
+                session.commit()
+                return True
+            except IntegrityError:
+                session.rollback()
+                return False

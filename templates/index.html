@@ -72,7 +72,37 @@
 
                 </div>
             </div>
+
+            <!-- Upload new vaults (.kdbx only) -->
+            <div id="vaultUploadSection">
+                <h2>Upload New Vault</h2>
+                <div class="vaultItem">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <input
+                            type="text"
+                            id="vault_name"
+                            name="vault_name"
+                            placeholder="Vault name"
+                            class="passAppInput vaultUploadName"
+                            required
+                        />
+                        <br />
+                        <input
+                            type="file"
+                            id="vault_file"
+                            name="vault_file"
+                            accept=".kdbx"
+                            class="passAppInput vaultUploadFileInput"
+                            required
+                        />
+                        <br />
+                        <button type="submit" class="passAppBtn passAppBtn--small">Upload Vault</button>
+                    </form>
+                </div>
+            </div>
+
             <h2>{{ message }}</h2>
+            <h2 class="fade-warning"></h2>
         {% endif %}
     </div>
     <div id="footer">

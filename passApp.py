@@ -176,7 +176,7 @@ def is_valid_hex(s, min_len = None):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     token = generate_csrf()
-    message = 'Welcome'
+    message = ''
 
     renderVars = dict(
         message=message,
@@ -212,6 +212,41 @@ def download_db():
         as_attachment=False,
         download_name='vault.kdbx'
     )
+
+@app.route('/upload-vault', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+@require_session
+def upload_vault():
+    if 'vault_file' not in request.files:
+        return jsonify({"msg": "No file uploaded"}), 400
+
+    file = request.files['vault_file']
+    vault_name = (request.form.get('vault_name') or "").strip()
+
+    if not file.filename or not vault_name:
+        return jsonify({"msg": "Missing file or vault name"}), 400
+
+    # Validate file extension
+    if not file.filename.lower().endswith('.kdbx'):
+        return jsonify({"msg": "Only .kdbx files are allowed"}), 400
+
+    # Read file data
+    vault_data = file.read()
+
+    # Only valid KDBX file by looking at headers, KDBX files have minimum size
+    if len(vault_data) < 32:
+        return jsonify({"msg": "Invalid KDBX file"}), 400
+
+    # Check if user already has a vault with this name
+    existing_vaults = db.listUserVaults(request.current_user.id)
+    if vault_name in existing_vaults:
+        return jsonify({"msg": "Vault name already exists"}), 409
+
+    success = db.addUserVault(request.current_user.id, vault_name, vault_data)
+    if success:
+        return jsonify({"msg": "Vault uploaded successfully", "config_version": config_version}), 200
+    else:
+        return jsonify({"msg": "Failed to save vault"}), 500
 
 @app.route('/logout', methods=['POST'])
 @limiter.limit("5/minute;30/hour")

@@ -279,3 +279,46 @@ async function vaultUnlockListener(e) {
     console.log(title, username, password);
   }
 };
+
+// Upload Vault KDBX File form event listener
+(document.getElementById('uploadForm') || fbNode).addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    formData.append('csrf_token', csrf_token);
+
+    // For message display logic
+    let warningClassElem = document.getElementsByClassName('fade-warning')[0];
+    let inPageWarningMsg = '';
+
+    try {
+        const response = await fetch('/upload-vault', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                'X-CSRFToken': csrf_token
+            }
+        });
+
+        const result = await response.json();
+        let warningClassElem = document.getElementsByClassName('fade-warning')[0];
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            inPageWarningMsg = `Upload failed: ${result.msg}`;
+        }
+    } catch (error) {
+        inPageWarningMsg = 'Upload failed due to network error';
+    }
+
+    // Show the warning with fade-in
+    if (inPageWarningMsg) {
+        warningClassElem.textContent = inPageWarningMsg;
+        warningClassElem.scrollIntoView({ behavior: 'smooth' });
+        warningClassElem.classList.remove('fade-warning');
+        void warningClassElem.offsetWidth; // Trigger reflow (needed for css effect)
+        warningClassElem.classList.add('fade-warning');
+    }
+});

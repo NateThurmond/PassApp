@@ -135,7 +135,7 @@ html, body {
   display: flex;
   gap: 16px;
   justify-content: center;
-  flex-direction: column;
+  align-items: center;
   width: 100%;
 }
 
@@ -149,6 +149,22 @@ html, body {
 
 .vaultItemTemplate {
   display: none;
+}
+
+.unlockVault {
+  background-image: url('/static/images/unlock.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.deleteVault {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
 }
 
 .fade-warning {

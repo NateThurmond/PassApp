@@ -296,3 +296,15 @@ class PassAppDB:
             except IntegrityError:
                 session.rollback()
                 return False
+
+    def deleteUserVault(self, userId, vaultName):
+        with Session(self.engine) as session:
+            keePassVault = session.query(KeePassVaults).filter(
+                KeePassVaults.user_id == userId,
+                KeePassVaults.vault_name == vaultName,
+            ).first()
+            if keePassVault:
+                session.delete(keePassVault)
+                session.commit()
+                return True
+            return False

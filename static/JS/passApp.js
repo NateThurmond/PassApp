@@ -50,7 +50,11 @@ async function buildVaultListLinks(vaults) {
 
     // And add event listener to unlock the vault
     let unlockBtnElem = vaultNode.querySelector('.unlockVault');
-    unlockBtnElem.addEventListener('click', vaultUnlockListener);
+    unlockBtnElem.addEventListener('click', vaultUnlockListener.bind(this));
+
+    // And add event listener to delete the vault
+    let deleteBtnElem = vaultNode.querySelector('.deleteVault');
+    deleteBtnElem.addEventListener('click', vaultDeleteListener.bind({vaultName: vault}));
 
     // And actually download the vault
     downloadVault(vault);
@@ -280,6 +284,46 @@ async function vaultUnlockListener(e) {
   }
 };
 
+async function vaultDeleteListener(e) {
+  e.preventDefault();
+
+  // TO-DO: Come up with custom modal for confirmation instead of browser default
+  if (!confirm(`Are you sure you want to delete the vault: ${this.vaultName}? This action cannot be undone.`)) {
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('csrf_token', csrf_token);
+  formData.append('vault_name', this.vaultName);
+
+  // For message display logic
+  let inPageWarningMsg = '';
+
+  try {
+      const response = await fetch('/delete-vault', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          headers: {
+              'X-CSRFToken': csrf_token
+          }
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+          window.location.reload();
+      } else {
+          inPageWarningMsg = `Delete failed: ${result.msg}`;
+      }
+  } catch (error) {
+      inPageWarningMsg = 'Delete failed due to network error';
+  }
+
+  // Show the warning with fade-in (if needed)
+  showInlineWarning(inPageWarningMsg);
+};
+
 // Upload Vault KDBX File form event listener
 (document.getElementById('uploadForm') || fbNode).addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -288,7 +332,6 @@ async function vaultUnlockListener(e) {
     formData.append('csrf_token', csrf_token);
 
     // For message display logic
-    let warningClassElem = document.getElementsByClassName('fade-warning')[0];
     let inPageWarningMsg = '';
 
     try {
@@ -302,7 +345,6 @@ async function vaultUnlockListener(e) {
         });
 
         const result = await response.json();
-        let warningClassElem = document.getElementsByClassName('fade-warning')[0];
 
         if (response.ok) {
             window.location.reload();
@@ -313,12 +355,17 @@ async function vaultUnlockListener(e) {
         inPageWarningMsg = 'Upload failed due to network error';
     }
 
-    // Show the warning with fade-in
-    if (inPageWarningMsg) {
-        warningClassElem.textContent = inPageWarningMsg;
-        warningClassElem.scrollIntoView({ behavior: 'smooth' });
-        warningClassElem.classList.remove('fade-warning');
-        void warningClassElem.offsetWidth; // Trigger reflow (needed for css effect)
-        warningClassElem.classList.add('fade-warning');
-    }
+    // Show the warning with fade-in (if needed)
+    showInlineWarning(inPageWarningMsg);
 });
+
+function showInlineWarning(inPageWarningMsg) {
+  if (!inPageWarningMsg) return;
+
+  let warningClassElem = document.getElementsByClassName('fade-warning')[0];
+  warningClassElem.textContent = inPageWarningMsg;
+  warningClassElem.scrollIntoView({ behavior: 'smooth' });
+  warningClassElem.classList.remove('fade-warning');
+  void warningClassElem.offsetWidth; // Trigger reflow (needed for css effect)
+  warningClassElem.classList.add('fade-warning');
+}

@@ -248,6 +248,21 @@ def upload_vault():
     else:
         return jsonify({"msg": "Failed to save vault"}), 500
 
+@app.route('/delete-vault', methods=['POST'])
+@limiter.limit("5/minute;30/hour")
+@require_session
+def delete_vault():
+    vault_name = (request.form.get('vault_name') or "").strip()
+
+    if not vault_name:
+        return jsonify({"msg": "Missing file or vault name"}), 400
+
+    success = db.deleteUserVault(request.current_user.id, vault_name)
+    if success:
+        return jsonify({"msg": "Vault deleted successfully", "config_version": config_version}), 200
+    else:
+        return jsonify({"msg": "Failed to delete vault"}), 500
+
 @app.route('/logout', methods=['POST'])
 @limiter.limit("5/minute;30/hour")
 @require_session

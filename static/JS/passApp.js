@@ -50,7 +50,7 @@ async function buildVaultListLinks(vaults) {
 
     // And add event listener to unlock the vault
     let unlockBtnElem = vaultNode.querySelector('.unlockVault');
-    unlockBtnElem.addEventListener('click', vaultUnlockListener.bind(this));
+    unlockBtnElem.addEventListener('click', vaultUnlockListener.bind({vaultName: vault}));
 
     // And add event listener to delete the vault
     let deleteBtnElem = vaultNode.querySelector('.deleteVault');
@@ -263,8 +263,7 @@ async function vaultUnlockListener(e) {
   // Find the password input inside it
   const passToUnlock = parent.querySelector('.vaultPasswordInput').value || '';
 
-  const vaultName = 'passClientsDb';
-  let vaultToLoad = userVaults[vaultName];
+  let vaultToLoad = userVaults[String(this.vaultName)];
 
   // Use kdbxweb to decrypt
   const creds = new Credentials(ProtectedValue.fromString(passToUnlock));

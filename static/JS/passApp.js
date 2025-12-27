@@ -265,21 +265,44 @@ async function vaultUnlockListener(e) {
 
   let vaultToLoad = userVaults[String(this.vaultName)];
 
+  // entry UI element to clone copy append
+  let passCardTemplate = document.querySelector('.entry-content-template');
+  let entriesSection = document.getElementById('entriesSection');
+
   // Use kdbxweb to decrypt
   const creds = new Credentials(ProtectedValue.fromString(passToUnlock));
   const db = await Kdbx.load(vaultToLoad, creds);
 
   for (const entry of db.groups[0].entries) {
-    const title = entry.fields.get('Title');
-    const username = entry.fields.get('UserName');
-    const passwordField = entry.fields.get('Password');
+    const title = entry.fields.get('Title') || '';
+    const username = entry.fields.get('UserName') || '';
+    const passwordField = entry.fields.get('Password') || '';
+    const urlField = entry.fields.get('Url') || '';
+    const notesField = entry.fields.get('Notes') || '';
+    const tagElems = entry.tags || [];
 
     let password = '';
     if (passwordField && typeof passwordField.getText === 'function') {
       password = await passwordField.getText();
     }
 
-    console.log(title, username, password);
+    // The UI element
+    let clonedPassCardTemplate = passCardTemplate.cloneNode(true);
+    clonedPassCardTemplate.classList.remove('entry-content-template');
+
+    clonedPassCardTemplate.querySelector('.entry-title').value = title;
+    clonedPassCardTemplate.querySelector('.entry-username').value = username;
+    clonedPassCardTemplate.querySelector('.entry-password').value = password;
+    clonedPassCardTemplate.querySelector('.entry-url').value = urlField;
+    clonedPassCardTemplate.querySelector('.entry-notes').value = notesField;
+    tagElems.reverse().forEach((tag) => {
+      let tagElem = document.createElement('span');
+      tagElem.classList.add('tag')
+      tagElem.textContent = tag;
+      clonedPassCardTemplate.querySelector('.tags-container').prepend(tagElem);
+    });
+
+    entriesSection.appendChild(clonedPassCardTemplate);
   }
 };
 

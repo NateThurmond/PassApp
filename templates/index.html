@@ -7,6 +7,7 @@
     <title>Pass App</title>
     <link rel="icon" href="static/images/unlock.svg">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/passCard.css') }}">
 </head>
 <body style="background: black; color: white">
     <header class="navbar">
@@ -105,6 +106,58 @@
                         <br />
                         <button type="submit" class="passAppBtn passAppBtn--small">Upload Vault</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- Sample KeePass Entry (for styling) -->
+            <div id="entriesSection" style="margin-top: 2em;">
+
+                <div class="entry-card entry-content-template">
+                    <div class="entry-header">
+                        <h3 class="entry-title-display"></h3>
+                        <div class="entry-actions">
+                            <button class="entry-btn entry-btn--save" title="Save Entry">💾</button>
+                            <button class="entry-btn entry-btn--copy" title="Copy Password">📋</button>
+                            <button class="entry-btn entry-btn--delete" title="Delete">⌫</button>
+                        </div>
+                    </div>
+
+                    <div class="entry-content">
+                        <div class="entry-field">
+                            <label class="entry-label">Title:</label>
+                            <input type="text" class="entry-input entry-title" value="" />
+                        </div>
+
+                        <div class="entry-field">
+                            <label class="entry-label">Username:</label>
+                            <input type="text" class="entry-input entry-username" value="" />
+                        </div>
+
+                        <div class="entry-field">
+                            <label class="entry-label">Password:</label>
+                            <div class="password-field">
+                                <input type="password" class="entry-input password-input entry-password" value="" />
+                                <button class="entry-btn entry-btn--toggle-password" title="Show/Hide Password">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="entry-field">
+                            <label class="entry-label">URL:</label>
+                            <input type="url" class="entry-input entry-url" value="" />
+                        </div>
+
+                        <div class="entry-field">
+                            <label class="entry-label">Tags:</label>
+                            <div class="tags-container">
+                                <input type="text" class="tags-input" placeholder="Add tag..." />
+                            </div>
+                        </div>
+
+                        <div class="entry-field">
+                            <label class="entry-label">Notes:</label>
+                            <textarea class="entry-textarea entry-notes" placeholder="Enter notes..." rows="3"></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
 

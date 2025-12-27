@@ -1,0 +1,186 @@
+#entriesSection {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.entry-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+  background: #2a2a2a;
+  border-radius: 8px 8px 0 0;
+}
+
+.entry-title-display {
+  margin: 0;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.entry-content {
+  padding: 1.5rem;
+}
+
+.entry-content-template {
+  display: none;
+}
+
+.entry-field {
+  margin-bottom: 1rem;
+}
+
+.entry-content .entry-field:last-child {
+  margin-bottom: 0;
+}
+
+.entry-label {
+  display: block;
+  color: #ccc;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.entry-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.entry-input:focus {
+  outline: none;
+  border-color: #2f4663;
+  box-shadow: 0 0 0 2px rgba(47, 70, 99, 0.3);
+}
+
+.password-field {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.password-input {
+  flex: 1;
+}
+
+.entry-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.5rem;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: Arial, sans-serif;
+  resize: vertical;
+}
+
+.entry-textarea:focus {
+  outline: none;
+  border-color: #2f4663;
+  box-shadow: 0 0 0 2px rgba(47, 70, 99, 0.3);
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tag {
+  background: #2f4663;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tag:hover {
+  background: #3a5a7a;
+}
+
+.tags-input {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 0.25rem;
+  font-size: 0.9rem;
+  min-width: 100px;
+  flex: 1;
+}
+
+.tags-input:focus {
+  outline: none;
+}
+
+.entry-btn {
+  background: #2f4663;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.entry-btn:hover {
+  background: #3a5a7a;
+}
+
+.entry-btn--save {
+  background: #4a90e2;
+}
+
+.entry-btn--save:hover {
+  background: #357abd;
+}
+
+.entry-btn--copy {
+  background: #5cb85c;
+}
+
+.entry-btn--copy:hover {
+  background: #449d44;
+}
+
+.entry-btn--delete {
+  background: #eb4034;
+}
+
+.entry-btn--delete:hover {
+  background: #cf1d11;
+}
+
+.entry-btn--toggle-password {
+  background: #666;
+  padding: 0.5rem;
+}
+
+.entry-btn--toggle-password:hover {
+  background: #777;
+}

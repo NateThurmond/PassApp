@@ -302,6 +302,18 @@ async function vaultUnlockListener(e) {
       clonedPassCardTemplate.querySelector('.tags-container').prepend(tagElem);
     });
 
+    // UI Element event listener for show/hide of password
+    clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').addEventListener('click', (e) => {
+      let pwdInput = e.target.closest('.entry-card').querySelector('.entry-password');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        e.target.textContent = '👀';
+      } else {
+        pwdInput.type = 'password';
+        e.target.textContent = '👁️';
+      }
+    });
+
     entriesSection.appendChild(clonedPassCardTemplate);
   }
 };

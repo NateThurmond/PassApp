@@ -271,57 +271,62 @@ async function vaultUnlockListener(e) {
 
   // Use kdbxweb to decrypt
   const creds = new Credentials(ProtectedValue.fromString(passToUnlock));
-  const db = await Kdbx.load(vaultToLoad, creds);
 
-  for (const entry of db.groups[0].entries) {
-    const title = entry.fields.get('Title') || '';
-    const username = entry.fields.get('UserName') || '';
-    const passwordField = entry.fields.get('Password') || '';
-    const urlField = entry.fields.get('Url') || '';
-    const notesField = entry.fields.get('Notes') || '';
-    const tagElems = entry.tags || [];
+  try {
+    const db = await Kdbx.load(vaultToLoad, creds);
 
-    let password = '';
-    if (passwordField && typeof passwordField.getText === 'function') {
-      password = await passwordField.getText();
+    for (const entry of db.groups[0].entries) {
+      const title = entry.fields.get('Title') || '';
+      const username = entry.fields.get('UserName') || '';
+      const passwordField = entry.fields.get('Password') || '';
+      const urlField = entry.fields.get('Url') || '';
+      const notesField = entry.fields.get('Notes') || '';
+      const tagElems = entry.tags || [];
+
+      let password = '';
+      if (passwordField && typeof passwordField.getText === 'function') {
+        password = await passwordField.getText();
+      }
+
+      // The UI element
+      let clonedPassCardTemplate = passCardTemplate.cloneNode(true);
+      clonedPassCardTemplate.classList.remove('entry-content-template');
+
+      clonedPassCardTemplate.querySelector('.entry-title').value = title;
+      clonedPassCardTemplate.querySelector('.entry-username').value = username;
+      clonedPassCardTemplate.querySelector('.entry-password').value = password;
+      clonedPassCardTemplate.querySelector('.entry-url').value = urlField;
+      clonedPassCardTemplate.querySelector('.entry-notes').value = notesField;
+      tagElems.reverse().forEach((tag) => {
+        let tagElem = document.createElement('span');
+        tagElem.classList.add('tag')
+        tagElem.textContent = tag;
+        clonedPassCardTemplate.querySelector('.tags-container').prepend(tagElem);
+      });
+
+      // UI Element event listener for show/hide of password
+      let pwdPassRehideTimer;
+      clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').addEventListener('click', (e) => {
+        let pwdInput = e.target.closest('.entry-card').querySelector('.entry-password');
+        if (pwdPassRehideTimer) {
+          clearTimeout(pwdPassRehideTimer);
+        }
+        if (pwdInput.type === 'password') {
+          pwdInput.type = 'text';
+          e.target.textContent = '👀';
+          pwdPassRehideTimer = setTimeout(() => {
+            clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').dispatchEvent(new Event('click'));
+          }, 55000);
+        } else {
+          pwdInput.type = 'password';
+          e.target.textContent = '👁️';
+        }
+      });
+
+      entriesSection.appendChild(clonedPassCardTemplate);
     }
-
-    // The UI element
-    let clonedPassCardTemplate = passCardTemplate.cloneNode(true);
-    clonedPassCardTemplate.classList.remove('entry-content-template');
-
-    clonedPassCardTemplate.querySelector('.entry-title').value = title;
-    clonedPassCardTemplate.querySelector('.entry-username').value = username;
-    clonedPassCardTemplate.querySelector('.entry-password').value = password;
-    clonedPassCardTemplate.querySelector('.entry-url').value = urlField;
-    clonedPassCardTemplate.querySelector('.entry-notes').value = notesField;
-    tagElems.reverse().forEach((tag) => {
-      let tagElem = document.createElement('span');
-      tagElem.classList.add('tag')
-      tagElem.textContent = tag;
-      clonedPassCardTemplate.querySelector('.tags-container').prepend(tagElem);
-    });
-
-    // UI Element event listener for show/hide of password
-    let pwdPassRehideTimer;
-    clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').addEventListener('click', (e) => {
-      let pwdInput = e.target.closest('.entry-card').querySelector('.entry-password');
-      if (pwdPassRehideTimer) {
-        clearTimeout(pwdPassRehideTimer);
-      }
-      if (pwdInput.type === 'password') {
-        pwdInput.type = 'text';
-        e.target.textContent = '👀';
-        pwdPassRehideTimer = setTimeout(() => {
-          clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').dispatchEvent(new Event('click'));
-        }, 55000);
-      } else {
-        pwdInput.type = 'password';
-        e.target.textContent = '👁️';
-      }
-    });
-
-    entriesSection.appendChild(clonedPassCardTemplate);
+  } catch (err) {
+    console.error('Failed to unlock vault: ', err);
   }
 };
 

@@ -31,6 +31,9 @@ listVaults();
 
 async function buildVaultListLinks(vaults) {
   const template = document.querySelector('.vaultItemTemplate');
+  const uploadTile = document.querySelector('.vaultUploadTile');
+  const vaultLinksContainer = document.getElementById('vaultLinks');
+
   vaults.forEach(vault => {
     // Clone the entire node
     let vaultNode = template.cloneNode(true);
@@ -45,8 +48,8 @@ async function buildVaultListLinks(vaults) {
       nameEl.innerHTML = `<strong>Vault:</strong> ${vault}`;
     }
 
-    // Append to the list
-    document.getElementById('vaultLinks').appendChild(vaultNode);
+    // Insert before the upload tile so it stays last
+    vaultLinksContainer.insertBefore(vaultNode, uploadTile);
 
     // And add event listener to unlock the vault
     let unlockBtnElem = vaultNode.querySelector('.unlockVault');

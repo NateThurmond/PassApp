@@ -171,7 +171,6 @@ async function unlockVaultWithBiometric(vaultName) {
 
   } catch (error) {
     console.error("Biometric unlock failed:", error);
-    await fancyAlert("Biometric unlock failed!");
     if (error.name === "NotAllowedError") {
       await fancyAlert("Face ID cancelled");
     }

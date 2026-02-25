@@ -57,7 +57,7 @@
                 <h2>Your Vaults:</h2>
                 <div id="vaultLinks">
 
-                    <div class="vaultItem vaultItemTemplate"">
+                    <div class="vaultItem vaultItemTemplate">
                         <div class="vaultName"><strong>Vault:</strong></div>
                         <div class="vaultPasswordFormDiv">
                             <input
@@ -79,34 +79,18 @@
 
                     <!-- Actual nodes copied and pasted here below -->
 
-                </div>
-            </div>
+                    <!-- Upload tile - always last -->
+                    <div class="vaultItem vaultUploadTile">
+                        <div class="vaultName"><strong>Upload New Vault</strong></div>
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <input type="text" id="vault_name" name="vault_name"
+                                placeholder="Vault name" class="passAppInput vaultUploadName" required />
+                            <input type="file" id="vault_file" name="vault_file"
+                                accept=".kdbx" class="passAppInput vaultUploadFileInput" required />
+                            <button type="submit" class="passAppBtn passAppBtn--small">Upload Vault</button>
+                        </form>
+                    </div>
 
-            <!-- Upload new vaults (.kdbx only) -->
-            <div id="vaultUploadSection">
-                <h2>Upload New Vault</h2>
-                <div class="vaultItem">
-                    <form id="uploadForm" enctype="multipart/form-data">
-                        <input
-                            type="text"
-                            id="vault_name"
-                            name="vault_name"
-                            placeholder="Vault name"
-                            class="passAppInput vaultUploadName"
-                            required
-                        />
-                        <br />
-                        <input
-                            type="file"
-                            id="vault_file"
-                            name="vault_file"
-                            accept=".kdbx"
-                            class="passAppInput vaultUploadFileInput"
-                            required
-                        />
-                        <br />
-                        <button type="submit" class="passAppBtn passAppBtn--small">Upload Vault</button>
-                    </form>
                 </div>
             </div>
 

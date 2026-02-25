@@ -110,11 +110,12 @@ async function enableBiometricForVault(vaultName, kdbxPassword) {
       iv: arrayBufferToBase64(iv)
     });
     
-    alert("Face ID enabled for this vault!");
+    await fancyAlert("Face ID enabled for this vault!");
   } catch (error) {
     console.error("Biometric registration failed:", error);
+    await fancyAlert("Biometric registration failed!");
     if (error.name === "NotAllowedError") {
-      alert("Face ID cancelled or not available");
+      await fancyAlert("Face ID cancelled or not available");
     }
   }
 }
@@ -170,8 +171,9 @@ async function unlockVaultWithBiometric(vaultName) {
 
   } catch (error) {
     console.error("Biometric unlock failed:", error);
+    await fancyAlert("Biometric unlock failed!");
     if (error.name === "NotAllowedError") {
-      alert("Face ID cancelled");
+      await fancyAlert("Face ID cancelled");
     }
     throw error; // Implement your own try/catch in usage of this method to handle failures
   }

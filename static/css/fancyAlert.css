@@ -1,0 +1,53 @@
+/* JavaScript wrapper functions to make the alerts/prompts/confirms look a bit better */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.custom-modal {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  text-align: center;
+}
+
+.custom-modal p {
+  color: black;
+  font-size: 1.5rem;
+  font-family: monospace, system-ui;
+}
+
+.custom-modal input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: black;
+  font-size: 1.0rem;
+  font-family: system-ui, monospace;
+}
+
+.custom-modal button {
+  margin: 10px 5px 0;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #007bff;
+  color: white;
+}
+
+.custom-modal button:hover {
+  background: #0056b3;
+}

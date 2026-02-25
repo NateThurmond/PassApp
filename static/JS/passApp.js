@@ -75,7 +75,7 @@ async function downloadVault(vaultName) {
   });
 
   if (!res.ok) {
-    alert("Failed to load vault");
+    await fancyAlert("Failed to load vault");
     return;
   }
 
@@ -270,12 +270,12 @@ async function vaultUnlockListener(e) {
       if (kdbxPassword) {
         passToUnlock = kdbxPassword;
       } else {
-        alert("Biometric authentication succeeded but failed to retrieve password");
+        await fancyAlert("Biometric authentication succeeded but failed to retrieve password");
         return;
       }
     } catch (error) {
       console.error("Failed to unlock with biometric: ", error);
-      alert("Failed to unlock with biometric. See console for details.");
+      await fancyAlert("Failed to unlock with biometric. See console for details.");
       return;
     }
   }
@@ -348,6 +348,7 @@ async function vaultUnlockListener(e) {
     }
   } catch (err) {
     console.error('Failed to unlock vault: ', err);
+    await fancyAlert('Failed to unlock vault');
   }
 };
 
@@ -355,7 +356,7 @@ async function vaultDeleteListener(e) {
   e.preventDefault();
 
   // TO-DO: Come up with custom modal for confirmation instead of browser default
-  if (!confirm(`Are you sure you want to delete the vault: ${this.vaultName}? This action cannot be undone.`)) {
+  if (!await fancyConfirm(`Are you sure you want to delete the vault: ${this.vaultName}? This action cannot be undone.`)) {
     return;
   }
 
@@ -395,7 +396,7 @@ async function biometricsSavePassPrompt(vaultName, password) {
   if (await isBiometricAvailable() === false) {
     return;
   }
-  if (!confirm("Would you like to save a biometric credential for easier vault access in the future?")) {
+  if (!await fancyConfirm("Would you like to save a biometric credential for easier vault access in the future?")) {
     return;
   }
 
@@ -403,7 +404,7 @@ async function biometricsSavePassPrompt(vaultName, password) {
     await enableBiometricForVault(vaultName, password);
   } catch (error) {
     console.error("Failed to enable biometric for vault: ", error);
-    alert("Failed to enable biometric for vault. See console for details.");
+    await fancyAlert("Failed to enable biometric for vault. See console for details.");
   }
 }
 

@@ -261,7 +261,24 @@ async function vaultUnlockListener(e) {
   const btn = e.target;
   const parent = btn.closest('.vaultPasswordFormDiv');
   // Find the password input inside it
-  const passToUnlock = parent.querySelector('.vaultPasswordInput').value || '';
+  let passToUnlock = parent.querySelector('.vaultPasswordInput').value || '';
+
+  // TO-DO: Separate button for biometrics
+  if (passToUnlock === '' && await isBiometricAvailable()) {
+    try {
+      let kdbxPassword = await unlockVaultWithBiometric(this.vaultName);
+      if (kdbxPassword) {
+        passToUnlock = kdbxPassword;
+      } else {
+        alert("Biometric authentication succeeded but failed to retrieve password");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to unlock with biometric: ", error);
+      alert("Failed to unlock with biometric. See console for details.");
+      return;
+    }
+  }
 
   let vaultToLoad = userVaults[String(this.vaultName)];
 
@@ -274,6 +291,10 @@ async function vaultUnlockListener(e) {
 
   try {
     const db = await Kdbx.load(vaultToLoad, creds);
+
+    if (await isBiometricAvailable() && !(await isBiometricSavedForVault(this.vaultName))) {
+      biometricsSavePassPrompt(this.vaultName, passToUnlock);
+    }
 
     for (const entry of db.groups[0].entries) {
       const title = entry.fields.get('Title') || '';
@@ -369,6 +390,22 @@ async function vaultDeleteListener(e) {
   // Show the warning with fade-in (if needed)
   showInlineWarning(inPageWarningMsg);
 };
+
+async function biometricsSavePassPrompt(vaultName, password) {
+  if (await isBiometricAvailable() === false) {
+    return;
+  }
+  if (!confirm("Would you like to save a biometric credential for easier vault access in the future?")) {
+    return;
+  }
+
+  try {
+    await enableBiometricForVault(vaultName, password);
+  } catch (error) {
+    console.error("Failed to enable biometric for vault: ", error);
+    alert("Failed to enable biometric for vault. See console for details.");
+  }
+}
 
 // Upload Vault KDBX File form event listener
 (document.getElementById('uploadForm') || fbNode).addEventListener('submit', async (event) => {

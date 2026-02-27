@@ -1,0 +1,15 @@
+[Unit]
+Description=Provide web UI for kdbx keepass management via python app
+After=network.target
+
+[Service]
+ExecStart=/usr/local/pyenv/versions/passApp/bin/python /home/pi/PassApp/passApp.py
+WorkingDirectory=/home/pi/PassApp
+Environment="PYENV_ROOT=/usr/local/pyenv"
+Environment="PATH=/usr/local/pyenv/bin:/usr/local/pyenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Restart=always
+User=pi
+Group=pi
+
+[Install]
+WantedBy=multi-user.target

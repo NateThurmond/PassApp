@@ -4,22 +4,146 @@
   text-align: left;
 }
 
+/* ── Filter/Sort Controls ─────────────────── */
+
+#entryControls {
+  display: none;  /* hidden until vault unlocked, shown via JS */
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+#entryControls[style*="display"] {
+  display: flex !important;
+}
+
+.entry-sort-btn {
+  background: #2a2a2a;
+  color: #ccc;
+  border: 1px solid #444;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.entry-sort-btn:hover {
+  background: #333;
+  border-color: #2f4663;
+}
+
+.entry-sort-btn.sort-active {
+  background: #2f4663;
+  color: white;
+  border-color: #2f4663;
+}
+
+.sort-arrow {
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.entry-filter-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.entry-filter-input:focus {
+  border-color: #2f4663;
+  box-shadow: 0 0 0 2px rgba(47, 70, 99, 0.3);
+}
+
+.entry-filter-input::placeholder {
+  color: #777;
+}
+
+/* ── Caption Bubble (collapsed state) ─────── */
+
 .entry-card {
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 8px;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.entry-bubble {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.entry-bubble:hover {
+  background: #252525;
+}
+
+.bubble-title {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-right: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.bubble-tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.bubble-modified {
+  color: #888;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* ── Expanded State ───────────────────────── */
+
+.entry-expanded {
+  display: none;
+}
+
+.entry-card--expanded .entry-expanded {
+  display: block;
+}
+
+.entry-card--expanded .entry-bubble {
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
 }
 
 .entry-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid #333;
   background: #2a2a2a;
-  border-radius: 8px 8px 0 0;
 }
 
 .entry-title-display {

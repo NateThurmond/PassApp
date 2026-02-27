@@ -436,7 +436,7 @@ def loginSrpVerify():
         response.set_cookie(
             "session_id",
             session_token,
-            max_age=60*60*24,
+            max_age=60*60*24*365,
             secure=True,
             httponly=True,
             samesite="Strict"

@@ -285,8 +285,8 @@ async function vaultUnlockListener(e) {
 
   let vaultToLoad = userVaults[String(this.vaultName)];
 
-  // entry UI element to clone copy append
   let passCardTemplate = document.querySelector('.entry-content-template');
+  let entryList = document.getElementById('entryList');
   let entriesSection = document.getElementById('entriesSection');
 
   // Use kdbxweb to decrypt
@@ -299,6 +299,21 @@ async function vaultUnlockListener(e) {
       biometricsSavePassPrompt(this.vaultName, passToUnlock);
     }
 
+    /* TO-DO: GLOBALLY THROUGHOUT PROJECT */
+    /*
+      - Highlight the currently unlocked vault
+      - Add global control that controls auto-save or not,
+        make sure this setting is saved in local storage
+      - Make row sections take as little width as possible. (As many
+        as you can get width-wise on screen)
+      - PERHAPS, add global control to auto show password on expand (again
+        savable)
+    */
+    /* END TO-DO: GLOBALLY THROUGHOUT PROJECT */
+
+    // Show the controls now that entries are loading
+    document.getElementById('entryControls').style.display = 'block';
+
     for (const entry of db.groups[0].entries) {
       const title = entry.fields.get('Title') || '';
       const username = entry.fields.get('UserName') || '';
@@ -306,6 +321,7 @@ async function vaultUnlockListener(e) {
       const urlField = entry.fields.get('Url') || '';
       const notesField = entry.fields.get('Notes') || '';
       const tagElems = entry.tags || [];
+      const lastModified = entry.times?.lastModTime || null;
 
       let password = '';
       if (passwordField && typeof passwordField.getText === 'function') {
@@ -313,24 +329,51 @@ async function vaultUnlockListener(e) {
       }
 
       // The UI element
-      let clonedPassCardTemplate = passCardTemplate.cloneNode(true);
-      clonedPassCardTemplate.classList.remove('entry-content-template');
+      let clonedCard = passCardTemplate.cloneNode(true);
+      clonedCard.classList.remove('entry-content-template');
 
-      clonedPassCardTemplate.querySelector('.entry-title').value = title;
-      clonedPassCardTemplate.querySelector('.entry-username').value = username;
-      clonedPassCardTemplate.querySelector('.entry-password').value = password;
-      clonedPassCardTemplate.querySelector('.entry-url').value = urlField;
-      clonedPassCardTemplate.querySelector('.entry-notes').value = notesField;
+      // Populate bubble
+      clonedCard.querySelector('.bubble-title').textContent = title || '(Untitled)';
+
+      const bubbleTagsEl = clonedCard.querySelector('.bubble-tags');
+      if (tagElems.length > 0) {
+        tagElems.forEach(tag => {
+          let tagSpan = document.createElement('span');
+          tagSpan.classList.add('tag');
+          tagSpan.textContent = tag;
+          bubbleTagsEl.appendChild(tagSpan);
+        });
+      }
+
+      const modifiedStr = lastModified ? new Date(lastModified).toLocaleDateString() : '';
+      clonedCard.querySelector('.bubble-modified').textContent = modifiedStr;
+
+      // Store data attributes for sort/filter
+      clonedCard.dataset.title = (title || '').toLowerCase();
+      clonedCard.dataset.tags = tagElems.map(t => t.toLowerCase()).join(',');
+      clonedCard.dataset.modified = lastModified ? new Date(lastModified).getTime() : '0';
+
+      // Populate expanded fields
+      clonedCard.querySelector('.entry-title').value = title;
+      clonedCard.querySelector('.entry-username').value = username;
+      clonedCard.querySelector('.entry-password').value = password;
+      clonedCard.querySelector('.entry-url').value = urlField;
+      clonedCard.querySelector('.entry-notes').value = notesField;
       tagElems.reverse().forEach((tag) => {
         let tagElem = document.createElement('span');
         tagElem.classList.add('tag')
         tagElem.textContent = tag;
-        clonedPassCardTemplate.querySelector('.tags-container').prepend(tagElem);
+        clonedCard.querySelector('.tags-container').prepend(tagElem);
+      });
+
+      // Click bubble to toggle expand/collapse
+      clonedCard.querySelector('.entry-bubble').addEventListener('click', () => {
+        clonedCard.classList.toggle('entry-card--expanded');
       });
 
       // UI Element event listener for show/hide of password
       let pwdPassRehideTimer;
-      clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').addEventListener('click', (e) => {
+      clonedCard.querySelector('.entry-btn--toggle-password').addEventListener('click', (e) => {
         let pwdInput = e.target.closest('.entry-card').querySelector('.entry-password');
         if (pwdPassRehideTimer) {
           clearTimeout(pwdPassRehideTimer);
@@ -339,7 +382,7 @@ async function vaultUnlockListener(e) {
           pwdInput.type = 'text';
           e.target.textContent = '👀';
           pwdPassRehideTimer = setTimeout(() => {
-            clonedPassCardTemplate.querySelector('.entry-btn--toggle-password').dispatchEvent(new Event('click'));
+            clonedCard.querySelector('.entry-btn--toggle-password').dispatchEvent(new Event('click'));
           }, 55000);
         } else {
           pwdInput.type = 'password';
@@ -347,7 +390,7 @@ async function vaultUnlockListener(e) {
         }
       });
 
-      entriesSection.appendChild(clonedPassCardTemplate);
+      entryList.appendChild(clonedCard);
     }
   } catch (err) {
     console.error('Failed to unlock vault: ', err);
@@ -455,4 +498,71 @@ function showInlineWarning(inPageWarningMsg) {
   warningClassElem.classList.remove('fade-warning');
   void warningClassElem.offsetWidth; // Trigger reflow (needed for css effect)
   warningClassElem.classList.add('fade-warning');
+}
+
+// Track current sort state: { field: 'name'|'modified', dir: 'asc'|'desc' } or null
+let currentSort = null;
+
+document.querySelectorAll('.entry-sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const field = btn.dataset.sort;
+
+    if (currentSort && currentSort.field === field) {
+      // Toggle direction
+      currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort = { field, dir: 'asc' };
+    }
+
+    // Update arrow indicators
+    document.querySelectorAll('.entry-sort-btn').forEach(b => {
+      b.querySelector('.sort-arrow').textContent = '';
+      b.classList.remove('sort-active');
+    });
+    btn.querySelector('.sort-arrow').textContent = currentSort.dir === 'asc' ? '▲' : '▼';
+    btn.classList.add('sort-active');
+
+    applySortAndFilter();
+  });
+});
+
+(document.getElementById('entryFilterInput') || fbNode).addEventListener('input', () => {
+  applySortAndFilter();
+});
+
+function applySortAndFilter() {
+  const entryList = document.getElementById('entryList');
+  if (!entryList) return;
+
+  const filterText = (document.getElementById('entryFilterInput')?.value || '').toLowerCase().trim();
+  let cards = Array.from(entryList.querySelectorAll('.entry-card'));
+
+  // Filter based on title or tags
+  cards.forEach(card => {
+    const title = card.dataset.title || '';
+    const tags = card.dataset.tags || '';
+    const matches = !filterText || title.includes(filterText) || tags.includes(filterText);
+    card.style.display = matches ? '' : 'none';
+  });
+
+  // Sort (only visible cards reorder, hidden stay in DOM)
+  if (currentSort) {
+    cards.sort((a, b) => {
+      let valA, valB;
+      if (currentSort.field === 'name') {
+        valA = a.dataset.title || '';
+        valB = b.dataset.title || '';
+        return currentSort.dir === 'asc'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      } else {
+        valA = parseInt(a.dataset.modified) || 0;
+        valB = parseInt(b.dataset.modified) || 0;
+        return currentSort.dir === 'asc' ? valA - valB : valB - valA;
+      }
+    });
+
+    // Reinsert in sorted order
+    cards.forEach(card => entryList.appendChild(card));
+  }
 }

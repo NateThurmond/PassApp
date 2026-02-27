@@ -449,4 +449,4 @@ def loginSrpVerify():
     return jsonify({"msg": message, "config_version": config_version}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(host="0.0.0.0", port=5002, debug=True)

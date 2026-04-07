@@ -19,8 +19,8 @@ While 2FA and other recent advances have made password management a lot easier, 
 
 2. **Clone the repository**:
     ```sh
-    git clone https://github.com/yourusername/pyEnphaseGraph.git
-    cd pyEnphaseGraph
+    git clone https://github.com/yourusername/PassApp.git
+    cd PassApp
     ```
 3. **Set up the virtual environment**:
     ```sh
@@ -32,10 +32,25 @@ While 2FA and other recent advances have made password management a lot easier, 
     ```sh
     pip install -r requirements.txt  # Install the required packages
     ```
-5. **Run the script:**
+5. **Create a `.env` file** with your CSRF secret:
+    ```
+    CSRF_SECRET_KEY=your-secret-key-here
+    ```
+6. **Run the app:**
     ```
     python passApp.py
     ```
+    The app listens on port 5002 (all interfaces).
+
+### Deployment (Raspberry Pi + Caddy)
+
+For HTTPS access on a local network, the app runs behind [Caddy](https://caddyserver.com/) as a reverse proxy:
+
+-   **Caddy** handles TLS termination on port 443
+-   **Flask** runs on `localhost:5002` (HTTP only)
+-   **Pi-hole** provides local DNS resolution (`passapp.nathanthurmond.com → 192.168.84.146`)
+
+Caddy's internal CA root certificate must be trusted on each client device.
 
 Inspiration, code snippets, etc.
 
